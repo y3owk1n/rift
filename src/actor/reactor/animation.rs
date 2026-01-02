@@ -33,18 +33,19 @@ pub struct Animation<'a> {
 }
 
 impl<'a> Animation<'a> {
+    #[inline]
     pub fn new(fps: f64, duration: f64, _: AnimationEasing) -> Self {
         let interval = Duration::from_secs_f64(1.0 / fps);
-        // let now = unsafe { CFAbsoluteTimeGetCurrent() };
         let now = Instant::now();
         Animation {
-            start: now, // + interval, // not necessary, provide one extra frame to get things going
+            start: now,
             interval,
             frames: (duration * fps).round() as u32,
-            windows: vec![],
+            windows: Vec::new(),
         }
     }
 
+    #[inline]
     pub fn add_window(
         &mut self,
         handle: &'a AppThreadHandle,
@@ -161,8 +162,8 @@ impl AnimationManager {
             reactor.config_manager.config.settings.animation_easing.clone(),
         );
         let mut animated_count = 0;
-        let mut animated_wids_wsids: Vec<u32> = Vec::new();
-        let mut animating_windows: Vec<WindowId> = Vec::new();
+        let mut animated_wids_wsids: Vec<u32> = Vec::with_capacity(layout.len());
+        let mut animating_windows: Vec<WindowId> = Vec::with_capacity(layout.len());
         let mut any_frame_changed = false;
 
         for &(wid, target_frame) in layout {
