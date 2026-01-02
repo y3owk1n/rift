@@ -460,10 +460,10 @@ impl State {
                 }
             }
             Request::CloseWindow(wid) => {
-                if let Some(window) = self.windows.get(wid)
-                    && let Err(err) = window.elem.close()
-                {
-                    warn!(?wid, error = ?err, "Failed to close window");
+                if let Some(window) = self.windows.get(wid) {
+                    if let Err(err) = window.elem.close() {
+                        warn!(?wid, ?err, "Failed to close window");
+                    }
                 }
             }
             Request::GetVisibleWindows { force_refresh } => {

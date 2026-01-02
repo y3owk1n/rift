@@ -175,7 +175,7 @@ impl WindowNotify {
                             events_tx.send(Event::WindowServerDestroyed(
                                 WindowServerId::new(window_id),
                                 SpaceId::new(evt.space_id.unwrap()),
-                            ))
+                            ));
                         }
                         CGSEventType::Known(KnownCGSEvent::SpaceWindowCreated) => {
                             events_tx.send(Event::WindowServerAppeared(
