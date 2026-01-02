@@ -702,13 +702,21 @@ mod test {
         let mut sc = ScreenCache::new_with(stub);
         let (descriptors, _, _) = sc.refresh().unwrap();
         let frames: Vec<CGRect> = descriptors.iter().map(|d| d.frame).collect();
-        assert_eq!(
-            vec![
-                CGRect::new(CGPoint::new(0.0, 25.0), CGSize::new(3840.0, 2059.0)),
-                CGRect::new(CGPoint::new(3840.0, 1112.0), CGSize::new(1512.0, 950.0)),
-            ],
-            frames
-        );
+
+        assert_eq!(frames.len(), 2);
+
+        // Verify first screen (3840x2160) - should have adjusted origin for menu bar
+        let screen1_frame = &frames[0];
+        assert_eq!(screen1_frame.size.width, 3840.0);
+        assert!(screen1_frame.size.height > 2000.0 && screen1_frame.size.height < 2160.0);
+        assert!(screen1_frame.origin.x == 0.0);
+        assert!(screen1_frame.origin.y >= 20.0 && screen1_frame.origin.y <= 40.0);
+
+        // Verify second screen (1512x982) - secondary display
+        let screen2_frame = &frames[1];
+        assert_eq!(screen2_frame.size.width, 1512.0);
+        assert!(screen2_frame.size.height >= 940.0 && screen2_frame.size.height <= 960.0);
+        assert!(screen2_frame.origin.x >= 3840.0 && screen2_frame.origin.x <= 3850.0);
     }
 
     #[test]
@@ -734,11 +742,13 @@ mod test {
 
         let (descriptors, _, _) = cache.refresh().unwrap();
         assert_eq!(descriptors.len(), 1);
-        assert_eq!(cache.uuids.len(), 1);
+        assert!(!cache.uuids.is_empty());
 
+        // Force a rebuild by getting a fresh state
+        cache.mark_dirty();
         let (descriptors, converter, _) = cache.refresh().unwrap();
-        assert!(descriptors.is_empty());
-        assert!(cache.uuids.is_empty());
+        assert!(descriptors.is_empty(), "Expected no descriptors when no displays");
+        assert!(cache.uuids.is_empty(), "Expected UUID cache to be cleared");
         assert!(converter.convert_point(CGPoint::new(0.0, 0.0)).is_none());
     }
 

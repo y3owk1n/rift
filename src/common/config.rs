@@ -295,7 +295,7 @@ pub struct Config {
 unsafe impl Send for Config {}
 unsafe impl Sync for Config {}
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct Settings {
     #[serde(default = "no")]
@@ -1204,5 +1204,294 @@ mod tests {
         assert!(suggestion.is_some());
         let (s, _maybe_dep) = suggestion.unwrap();
         assert_eq!(s, "toggle_stack");
+    }
+
+    #[test]
+    fn test_workspace_settings_validation_empty_workspace_count() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.default_workspace_count = 0;
+        let issues = settings.validate();
+        assert!(!issues.is_empty());
+        assert!(issues.iter().any(|i| i.contains("default_workspace_count must be at least 1")));
+    }
+
+    #[test]
+    fn test_workspace_settings_validation_excessive_workspaces() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.default_workspace_count = 100;
+        let issues = settings.validate();
+        assert!(!issues.is_empty());
+        assert!(issues.iter().any(|i| i.contains("should not exceed")));
+    }
+
+    #[test]
+    fn test_workspace_settings_validation_too_many_names() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.workspace_names = vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string(), "5".to_string()];
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("More workspace names provided")));
+    }
+
+    #[test]
+    fn test_workspace_settings_validation_default_out_of_bounds() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.default_workspace = 5;
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("default_workspace")));
+    }
+
+    #[test]
+    fn test_app_rule_validation_no_identifiers() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.app_rules.push(AppWorkspaceRule {
+            app_id: None,
+            workspace: None,
+            floating: false,
+            manage: true,
+            app_name: None,
+            title_regex: None,
+            title_substring: None,
+            ax_role: None,
+            ax_subrole: None,
+        });
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("no app_id, app_name")));
+    }
+
+    #[test]
+    fn test_app_rule_validation_suspicious_app_id() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.app_rules.push(AppWorkspaceRule {
+            app_id: Some("invalid".to_string()),
+            workspace: None,
+            floating: false,
+            manage: true,
+            app_name: None,
+            title_regex: None,
+            title_substring: None,
+            ax_role: None,
+            ax_subrole: None,
+        });
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("suspicious app_id")));
+    }
+
+    #[test]
+    fn test_app_rule_validation_workspace_index_out_of_bounds() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.app_rules.push(AppWorkspaceRule {
+            app_id: Some("com.example.app".to_string()),
+            workspace: Some(WorkspaceSelector::Index(10)),
+            floating: false,
+            manage: true,
+            app_name: None,
+            title_regex: None,
+            title_substring: None,
+            ax_role: None,
+            ax_subrole: None,
+        });
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("references workspace 10")));
+    }
+
+    #[test]
+    fn test_app_rule_validation_empty_title_regex() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.app_rules.push(AppWorkspaceRule {
+            app_id: Some("com.example.app".to_string()),
+            workspace: None,
+            floating: false,
+            manage: true,
+            app_name: None,
+            title_regex: Some("".to_string()),
+            title_substring: None,
+            ax_role: None,
+            ax_subrole: None,
+        });
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("empty title_regex")));
+    }
+
+    #[test]
+    fn test_app_rule_validation_empty_title_substring() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.app_rules.push(AppWorkspaceRule {
+            app_id: Some("com.example.app".to_string()),
+            workspace: None,
+            floating: false,
+            manage: true,
+            app_name: None,
+            title_regex: None,
+            title_substring: Some("".to_string()),
+            ax_role: None,
+            ax_subrole: None,
+        });
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("empty title_substring")));
+    }
+
+    #[test]
+    fn test_settings_validation_negative_animation_duration() {
+        let mut settings = Settings::default();
+        settings.animation_duration = -1.0;
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("animation_duration must be non-negative")));
+    }
+
+    #[test]
+    fn test_settings_validation_zero_animation_fps() {
+        let mut settings = Settings::default();
+        settings.animation_fps = 0.0;
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("animation_fps must be positive")));
+    }
+
+    #[test]
+    fn test_settings_validation_negative_swipe_tolerance() {
+        let mut settings = Settings::default();
+        settings.gestures.swipe_vertical_tolerance = -1.0;
+        let issues = settings.validate();
+        assert!(issues.iter().any(|i| i.contains("swipe_vertical_tolerance must be non-negative")));
+    }
+
+    #[test]
+    fn test_stack_settings_validation_negative_offset() {
+        let mut stack = StackSettings::default();
+        stack.stack_offset = -5.0;
+        let issues = stack.validate();
+        assert!(issues.iter().any(|i| i.contains("stack_offset must be non-negative")));
+    }
+
+    #[test]
+    fn test_outer_gaps_validation_negative_values() {
+        let mut gaps = OuterGaps::default();
+        gaps.top = -1.0;
+        gaps.left = -2.0;
+        gaps.bottom = -3.0;
+        gaps.right = -4.0;
+        let issues = gaps.validate();
+        assert_eq!(4, issues.len());
+    }
+
+    #[test]
+    fn test_inner_gaps_validation_negative_values() {
+        let mut gaps = InnerGaps::default();
+        gaps.horizontal = -1.0;
+        gaps.vertical = -2.0;
+        let issues = gaps.validate();
+        assert_eq!(2, issues.len());
+    }
+
+    #[test]
+    fn test_gap_settings_effective_for_display_with_override() {
+        let mut gap_settings = GapSettings::default();
+        let mut overrides = HashMap::default();
+        let override_outer = OuterGaps {
+            top: 10.0,
+            left: 20.0,
+            bottom: 30.0,
+            right: 40.0,
+        };
+        let override_inner = InnerGaps {
+            horizontal: 5.0,
+            vertical: 8.0,
+        };
+        overrides.insert("display-uuid".to_string(), GapOverride {
+            outer: Some(override_outer),
+            inner: Some(override_inner),
+        });
+        gap_settings.per_display = overrides;
+
+        let effective = gap_settings.effective_for_display(Some("display-uuid"));
+        assert_eq!(10.0, effective.outer.top);
+        assert_eq!(20.0, effective.outer.left);
+        assert_eq!(30.0, effective.outer.bottom);
+        assert_eq!(40.0, effective.outer.right);
+        assert_eq!(5.0, effective.inner.horizontal);
+        assert_eq!(8.0, effective.inner.vertical);
+    }
+
+    #[test]
+    fn test_gap_settings_effective_for_display_without_override() {
+        let gap_settings = GapSettings::default();
+        let effective = gap_settings.effective_for_display(Some("unknown-display"));
+        assert_eq!(0.0, effective.outer.top);
+        assert_eq!(0.0, effective.outer.left);
+        assert_eq!(0.0, effective.outer.bottom);
+        assert_eq!(0.0, effective.outer.right);
+        assert_eq!(0.0, effective.inner.horizontal);
+        assert_eq!(0.0, effective.inner.vertical);
+    }
+
+    #[test]
+    fn test_config_validate_empty_is_valid() {
+        let config = Config::default();
+        let issues = config.validate();
+        assert!(issues.is_empty(), "Expected no issues, got: {:?}", issues);
+    }
+
+    #[test]
+    fn test_expand_modifier_combinations() {
+        let combinations: HashMap<String, String> = [
+            ("leader".to_string(), "Ctrl + Alt".to_string()),
+            ("mycombo".to_string(), "Shift + Cmd".to_string()),
+        ].iter().cloned().collect();
+
+        assert_eq!(Config::expand_modifier_combinations("leader + C", &combinations), "Ctrl + Alt + C");
+        assert_eq!(Config::expand_modifier_combinations("mycombo + V", &combinations), "Shift + Cmd + V");
+        assert_eq!(Config::expand_modifier_combinations("Ctrl + C", &combinations), "Ctrl + C");
+    }
+
+    #[test]
+    fn test_workspace_selector_index() {
+        let selector = WorkspaceSelector::Index(2);
+        match selector {
+            WorkspaceSelector::Index(i) => assert_eq!(i, 2),
+            _ => panic!("Expected Index variant"),
+        }
+    }
+
+    #[test]
+    fn test_workspace_selector_name() {
+        let selector = WorkspaceSelector::Name("Development".to_string());
+        match selector {
+            WorkspaceSelector::Name(n) => assert_eq!(n, "Development"),
+            _ => panic!("Expected Name variant"),
+        }
+    }
+
+    #[test]
+    fn test_animation_easing_variants() {
+        use AnimationEasing::*;
+        let variants = vec![
+            EaseInOut,
+            Linear,
+            EaseInSine,
+            EaseOutSine,
+            EaseInOutSine,
+            EaseInQuad,
+            EaseOutQuad,
+            EaseInOutQuad,
+            EaseInCubic,
+            EaseOutCubic,
+            EaseInOutCubic,
+            EaseInQuart,
+            EaseOutQuart,
+            EaseInOutQuart,
+            EaseInQuint,
+            EaseOutQuint,
+            EaseInOutQuint,
+            EaseInExpo,
+            EaseOutExpo,
+            EaseInOutExpo,
+            EaseInCirc,
+            EaseOutCirc,
+            EaseInOutCirc,
+        ];
+        for easing in variants {
+            let serialized = serde_json::to_string(&easing).unwrap();
+            let deserialized: AnimationEasing = serde_json::from_str(&serialized).unwrap();
+            assert_eq!(easing, deserialized);
+        }
     }
 }

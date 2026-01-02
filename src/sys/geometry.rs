@@ -144,3 +144,123 @@ impl<'de> DeserializeAs<'de, ic::CGRect> for CGRectDef {
         CGRectDef::deserialize(deserializer)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+
+    #[test]
+    fn test_round_cgrect() {
+        let rect = CGRect::new(CGPoint::new(10.4, 20.7), CGSize::new(100.0, 200.0));
+        let rounded = rect.round();
+        assert_eq!(rounded.origin.x, 10.0);
+        assert_eq!(rounded.origin.y, 21.0);
+        // CGRect round computes size as max - min, so 100.0 stays 100.0
+        assert_eq!(rounded.size.width, 100.0);
+        assert_eq!(rounded.size.height, 200.0);
+    }
+
+    #[test]
+    fn test_round_cgpoint() {
+        let point = CGPoint::new(10.4, 20.7);
+        let rounded = point.round();
+        assert_eq!(rounded.x, 10.0);
+        assert_eq!(rounded.y, 21.0);
+    }
+
+    #[test]
+    fn test_round_cgsize() {
+        let size = CGSize::new(100.6, 200.3);
+        let rounded = size.round();
+        assert_eq!(rounded.width, 101.0);
+        assert_eq!(rounded.height, 200.0);
+    }
+
+    #[test]
+    fn test_is_within_f64() {
+        let a = 10.0;
+        let b = 10.05;
+        assert!(a.is_within(0.1, b));
+        assert!(!a.is_within(0.01, b));
+    }
+
+    #[test]
+    fn test_is_within_cgpoint() {
+        let a = CGPoint::new(10.0, 20.0);
+        let b = CGPoint::new(10.05, 20.08);
+        assert!(a.is_within(0.1, b));
+        assert!(!a.is_within(0.01, b));
+    }
+
+    #[test]
+    fn test_is_within_cgsize() {
+        let a = CGSize::new(100.0, 200.0);
+        let b = CGSize::new(100.08, 200.05);
+        assert!(a.is_within(0.1, b));
+        assert!(!a.is_within(0.01, b));
+    }
+
+    #[test]
+    fn test_is_within_cgrect() {
+        let a = CGRect::new(CGPoint::new(10.0, 20.0), CGSize::new(100.0, 200.0));
+        let b = CGRect::new(CGPoint::new(10.05, 20.08), CGSize::new(100.03, 200.02));
+        assert!(a.is_within(0.1, b));
+        assert!(!a.is_within(0.01, b));
+    }
+
+    #[test]
+    fn test_same_as_cgrect() {
+        let a = CGRect::new(CGPoint::new(10.0, 20.0), CGSize::new(100.0, 200.0));
+        let b = CGRect::new(CGPoint::new(10.05, 20.05), CGSize::new(100.05, 200.05));
+        assert!(a.same_as(b));
+    }
+
+    #[test]
+    fn test_intersection() {
+        let rect1 = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(100.0, 100.0));
+        let rect2 = CGRect::new(CGPoint::new(50.0, 50.0), CGSize::new(100.0, 100.0));
+        let intersection = rect1.intersection(&rect2);
+
+        assert_eq!(intersection.origin.x, 50.0);
+        assert_eq!(intersection.origin.y, 50.0);
+        assert_eq!(intersection.size.width, 50.0);
+        assert_eq!(intersection.size.height, 50.0);
+    }
+
+    #[test]
+    fn test_no_intersection() {
+        let rect1 = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(100.0, 100.0));
+        let rect2 = CGRect::new(CGPoint::new(200.0, 200.0), CGSize::new(100.0, 100.0));
+        let intersection = rect1.intersection(&rect2);
+
+        assert_eq!(intersection.size.width, 0.0);
+        assert_eq!(intersection.size.height, 0.0);
+    }
+
+    #[test]
+    fn test_contains_point() {
+        let rect = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(100.0, 100.0));
+        assert!(rect.contains(CGPoint::new(50.0, 50.0)));
+        assert!(rect.contains(CGPoint::new(0.0, 0.0)));
+        assert!(rect.contains(CGPoint::new(100.0, 100.0)));
+        assert!(!rect.contains(CGPoint::new(101.0, 50.0)));
+        assert!(!rect.contains(CGPoint::new(-1.0, 50.0)));
+    }
+
+    #[test]
+    fn test_contains_rect() {
+        let rect = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(100.0, 100.0));
+        let inner = CGRect::new(CGPoint::new(10.0, 10.0), CGSize::new(80.0, 80.0));
+        assert!(rect.contains_rect(inner));
+
+        let outer = CGRect::new(CGPoint::new(-10.0, -10.0), CGSize::new(120.0, 120.0));
+        assert!(!rect.contains_rect(outer));
+    }
+
+    #[test]
+    fn test_area() {
+        let rect = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(100.0, 200.0));
+        assert_eq!(rect.area(), 20000.0);
+    }
+}

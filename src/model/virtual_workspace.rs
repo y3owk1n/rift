@@ -1828,4 +1828,262 @@ mod tests {
         );
         assert!(bw2_updated_assignment.floating);
     }
+
+    #[test]
+    fn test_remove_window() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws_id = manager.create_workspace(space, Some("WS1".to_string())).unwrap();
+        let window = WindowId::new(1, 1);
+
+        manager.assign_window_to_workspace(space, window, ws_id);
+        assert_eq!(manager.workspace_for_window(space, window), Some(ws_id));
+
+        manager.remove_window(window);
+        assert_eq!(manager.workspace_for_window(space, window), None);
+    }
+
+    #[test]
+    fn test_remove_windows_for_app() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws_id = manager.create_workspace(space, Some("WS1".to_string())).unwrap();
+
+        let window1 = WindowId::new(100, 1);
+        let window2 = WindowId::new(100, 2);
+        let window3 = WindowId::new(200, 1);
+
+        manager.assign_window_to_workspace(space, window1, ws_id);
+        manager.assign_window_to_workspace(space, window2, ws_id);
+        manager.assign_window_to_workspace(space, window3, ws_id);
+
+        manager.remove_windows_for_app(100);
+
+        assert_eq!(manager.workspace_for_window(space, window1), None);
+        assert_eq!(manager.workspace_for_window(space, window2), None);
+        assert_eq!(manager.workspace_for_window(space, window3), Some(ws_id));
+    }
+
+    #[test]
+    fn test_workspace_rename() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws_id = manager.create_workspace(space, Some("Original".to_string())).unwrap();
+
+        assert!(manager.rename_workspace(space, ws_id, "Renamed".to_string()));
+        let workspaces = manager.list_workspaces(space);
+        assert!(workspaces.iter().any(|(_, name)| name == "Renamed"));
+    }
+
+    #[test]
+    fn test_rename_nonexistent_workspace() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        // Use Default to create an invalid workspace ID
+        let fake_ws_id = VirtualWorkspaceId::default();
+        assert!(!manager.rename_workspace(space, fake_ws_id, "Test".to_string()));
+    }
+
+    #[test]
+    fn test_floating_position_storage() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws_id = manager.create_workspace(space, Some("WS1".to_string())).unwrap();
+        let window = WindowId::new(1, 1);
+        let position = CGRect::new(CGPoint::new(100.0, 100.0), CGSize::new(400.0, 300.0));
+
+        manager.store_floating_position(space, ws_id, window, position);
+        assert_eq!(manager.get_floating_position(space, ws_id, window), Some(position));
+
+        manager.remove_floating_position(window);
+        assert_eq!(manager.get_floating_position(space, ws_id, window), None);
+    }
+
+    #[test]
+    fn test_workspace_windows() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws_id = manager.create_workspace(space, Some("WS1".to_string())).unwrap();
+
+        let window1 = WindowId::new(1, 1);
+        let window2 = WindowId::new(1, 2);
+
+        manager.assign_window_to_workspace(space, window1, ws_id);
+        manager.assign_window_to_workspace(space, window2, ws_id);
+
+        let windows = manager.workspace_windows(space, ws_id);
+        assert_eq!(windows.len(), 2);
+        assert!(windows.contains(&window1));
+        assert!(windows.contains(&window2));
+    }
+
+    #[test]
+    fn test_workspace_windows_wrong_space() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space1 = SpaceId::new(1);
+        let space2 = SpaceId::new(2);
+        let ws_id = manager.create_workspace(space1, Some("WS1".to_string())).unwrap();
+
+        let window = WindowId::new(1, 1);
+        manager.assign_window_to_workspace(space1, window, ws_id);
+
+        let windows = manager.workspace_windows(space2, ws_id);
+        assert!(windows.is_empty());
+    }
+
+    #[test]
+    fn test_auto_assign_window() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let window = WindowId::new(1, 1);
+
+        let result = manager.auto_assign_window(window, space);
+        assert!(result.is_ok());
+        let ws_id = result.unwrap();
+        assert_eq!(manager.workspace_for_window(space, window), Some(ws_id));
+    }
+
+    #[test]
+    fn test_is_window_in_active_workspace() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws1_id = manager.create_workspace(space, Some("WS1".to_string())).unwrap();
+        let ws2_id = manager.create_workspace(space, Some("WS2".to_string())).unwrap();
+        let window = WindowId::new(1, 1);
+
+        manager.set_active_workspace(space, ws1_id);
+        manager.assign_window_to_workspace(space, window, ws1_id);
+        assert!(manager.is_window_in_active_workspace(space, window));
+
+        manager.set_active_workspace(space, ws2_id);
+        assert!(!manager.is_window_in_active_workspace(space, window));
+    }
+
+    #[test]
+    fn test_windows_in_inactive_workspaces() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws1_id = manager.create_workspace(space, Some("WS1".to_string())).unwrap();
+        let ws2_id = manager.create_workspace(space, Some("WS2".to_string())).unwrap();
+        let window1 = WindowId::new(1, 1);
+        let window2 = WindowId::new(1, 2);
+
+        manager.set_active_workspace(space, ws1_id);
+        manager.assign_window_to_workspace(space, window1, ws1_id);
+        manager.assign_window_to_workspace(space, window2, ws2_id);
+
+        let inactive_windows = manager.windows_in_inactive_workspaces(space);
+        assert_eq!(inactive_windows.len(), 1);
+        assert_eq!(inactive_windows[0], window2);
+    }
+
+    #[test]
+    fn test_find_window_by_idx() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws_id = manager.create_workspace(space, Some("WS1".to_string())).unwrap();
+
+        let window1 = WindowId::new(100, 1);
+        let window2 = WindowId::new(200, 2);
+
+        manager.assign_window_to_workspace(space, window1, ws_id);
+        manager.assign_window_to_workspace(space, window2, ws_id);
+
+        assert_eq!(manager.find_window_by_idx(space, 1), Some(window1));
+        assert_eq!(manager.find_window_by_idx(space, 2), Some(window2));
+        assert_eq!(manager.find_window_by_idx(space, 99), None);
+    }
+
+    #[test]
+    fn test_get_stats() {
+        let mut manager = VirtualWorkspaceManager::new();
+        let space = SpaceId::new(1);
+        let ws_id = manager.create_workspace(space, Some("WS1".to_string())).unwrap();
+
+        let window1 = WindowId::new(1, 1);
+        let window2 = WindowId::new(1, 2);
+        manager.assign_window_to_workspace(space, window1, ws_id);
+        manager.assign_window_to_workspace(space, window2, ws_id);
+
+        let stats = manager.get_stats();
+        // Default creates 4 workspaces, plus the one we added
+        assert_eq!(stats.total_workspaces, 5);
+        assert_eq!(stats.total_windows, 2);
+        assert_eq!(stats.active_spaces, 1);
+        assert_eq!(stats.workspace_window_counts.get(&ws_id), Some(&2));
+    }
+
+    #[test]
+    fn test_target_workspace_for_app_info() {
+        let mut settings = VirtualWorkspaceSettings::default();
+        settings.app_rules = vec![AppWorkspaceRule {
+            app_id: Some("com.example.specific".to_string()),
+            workspace: Some(WorkspaceSelector::Index(2)),
+            floating: false,
+            manage: true,
+            app_name: None,
+            title_regex: None,
+            title_substring: None,
+            ax_role: None,
+            ax_subrole: None,
+        }];
+        let mut manager = VirtualWorkspaceManager::new_with_config(&settings);
+        let space = SpaceId::new(1);
+
+        let target = manager.target_workspace_for_app_info(
+            space,
+            Some("com.example.specific"),
+            None,
+            None,
+            None,
+            None,
+        );
+        let workspaces = manager.list_workspaces(space);
+        let expected_ws = workspaces.get(2).map(|(id, _)| *id);
+        assert_eq!(target, expected_ws);
+    }
+
+    #[test]
+    fn test_calculate_hidden_position_bottom_left() {
+        let manager = VirtualWorkspaceManager::new();
+        let screen_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let original_size = CGSize::new(400.0, 300.0);
+
+        let hidden = manager.calculate_hidden_position(
+            screen_frame,
+            0,
+            original_size,
+            HideCorner::BottomLeft,
+            None,
+        );
+        assert!(hidden.origin.x < screen_frame.origin.x);
+    }
+
+    #[test]
+    fn test_floating_window_positions() {
+        let mut positions = FloatingWindowPositions::default();
+        let window = WindowId::new(1, 1);
+        let pos = CGRect::new(CGPoint::new(100.0, 100.0), CGSize::new(400.0, 300.0));
+
+        positions.store_position(window, pos);
+        assert_eq!(positions.get_position(window), Some(pos));
+        assert!(positions.contains_window(window));
+
+        positions.clear();
+        assert!(!positions.contains_window(window));
+    }
+
+    #[test]
+    fn test_floating_window_positions_remove_app() {
+        let mut positions = FloatingWindowPositions::default();
+        let window1 = WindowId::new(100, 1);
+        let window2 = WindowId::new(200, 1);
+
+        positions.store_position(window1, CGRect::ZERO);
+        positions.store_position(window2, CGRect::ZERO);
+
+        positions.remove_app_windows(100);
+        assert!(!positions.contains_window(window1));
+        assert!(positions.contains_window(window2));
+    }
 }

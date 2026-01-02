@@ -123,3 +123,191 @@ impl FloatingManager {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn w(pid: i32, idx: u32) -> WindowId { WindowId::new(pid, idx) }
+
+    #[test]
+    fn test_floating_manager_is_floating() {
+        let mut manager = FloatingManager::new();
+        assert!(!manager.is_floating(w(1, 1)));
+
+        manager.add_floating(w(1, 1));
+        assert!(manager.is_floating(w(1, 1)));
+        assert!(!manager.is_floating(w(1, 2)));
+    }
+
+    #[test]
+    fn test_floating_manager_add_remove() {
+        let mut manager = FloatingManager::new();
+
+        manager.add_floating(w(1, 1));
+        manager.add_floating(w(1, 2));
+        assert_eq!(manager.floating_windows.len(), 2);
+
+        manager.remove_floating(w(1, 1));
+        assert!(!manager.is_floating(w(1, 1)));
+        assert!(manager.is_floating(w(1, 2)));
+    }
+
+    #[test]
+    fn test_floating_manager_active() {
+        let mut manager = FloatingManager::new();
+        let space = SpaceId::new(1);
+
+        manager.add_floating(w(1, 1));
+        manager.add_active(space, 1, w(1, 1));
+
+        let active = manager.active_flat(space);
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0], w(1, 1));
+    }
+
+    #[test]
+    fn test_floating_manager_clear_active_for_app() {
+        let mut manager = FloatingManager::new();
+        let space = SpaceId::new(1);
+
+        manager.add_floating(w(1, 1));
+        manager.add_floating(w(1, 2));
+        manager.add_active(space, 1, w(1, 1));
+        manager.add_active(space, 1, w(1, 2));
+
+        manager.clear_active_for_app(space, 1);
+        let active = manager.active_flat(space);
+        assert!(active.is_empty());
+    }
+
+    #[test]
+    fn test_floating_manager_remove_active() {
+        let mut manager = FloatingManager::new();
+        let space = SpaceId::new(1);
+
+        manager.add_floating(w(1, 1));
+        manager.add_floating(w(1, 2));
+        manager.add_active(space, 1, w(1, 1));
+        manager.add_active(space, 1, w(1, 2));
+
+        manager.remove_active(space, 1, w(1, 1));
+        let active = manager.active_flat(space);
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0], w(1, 2));
+    }
+
+    #[test]
+    fn test_floating_manager_last_focus() {
+        let mut manager = FloatingManager::new();
+
+        assert_eq!(manager.last_focus(), None);
+
+        manager.set_last_focus(Some(w(1, 1)));
+        assert_eq!(manager.last_focus(), Some(w(1, 1)));
+
+        manager.set_last_focus(None);
+        assert_eq!(manager.last_focus(), None);
+    }
+
+    #[test]
+    fn test_floating_manager_remove_all_for_pid() {
+        let mut manager = FloatingManager::new();
+        let space = SpaceId::new(1);
+
+        manager.add_floating(w(1, 1));
+        manager.add_floating(w(1, 2));
+        manager.add_floating(w(2, 1));
+        manager.add_active(space, 1, w(1, 1));
+        manager.add_active(space, 1, w(1, 2));
+        manager.add_active(space, 2, w(2, 1));
+        manager.set_last_focus(Some(w(1, 1)));
+
+        manager.remove_all_for_pid(1);
+
+        assert!(!manager.is_floating(w(1, 1)));
+        assert!(!manager.is_floating(w(1, 2)));
+        assert!(manager.is_floating(w(2, 1)));
+
+        let active = manager.active_flat(space);
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0], w(2, 1));
+
+        assert_eq!(manager.last_focus(), None);
+    }
+
+    #[test]
+    fn test_floating_manager_rebuild_active_for_workspace() {
+        let mut manager = FloatingManager::new();
+        let space = SpaceId::new(1);
+
+        manager.add_floating(w(1, 1));
+        manager.add_floating(w(1, 2));
+        manager.add_floating(w(1, 3));
+
+        manager.rebuild_active_for_workspace(
+            space,
+            vec![w(1, 1), w(1, 2), w(1, 4)],
+        );
+
+        let active = manager.active_flat(space);
+        assert_eq!(active.len(), 2);
+        assert!(active.contains(&w(1, 1)));
+        assert!(active.contains(&w(1, 2)));
+        assert!(!active.contains(&w(1, 3)));
+        assert!(!active.contains(&w(1, 4)));
+    }
+
+    #[test]
+    fn test_floating_manager_remap_space() {
+        let mut manager = FloatingManager::new();
+        let space1 = SpaceId::new(1);
+        let space2 = SpaceId::new(2);
+
+        manager.add_floating(w(1, 1));
+        manager.add_active(space1, 1, w(1, 1));
+
+        manager.remap_space(space1, space2);
+
+        let active1 = manager.active_flat(space1);
+        let active2 = manager.active_flat(space2);
+
+        assert!(active1.is_empty());
+        assert_eq!(active2.len(), 1);
+        assert_eq!(active2[0], w(1, 1));
+    }
+
+    #[test]
+    fn test_floating_manager_remap_same_space() {
+        let mut manager = FloatingManager::new();
+        let space = SpaceId::new(1);
+
+        manager.add_floating(w(1, 1));
+        manager.add_active(space, 1, w(1, 1));
+
+        manager.remap_space(space, space);
+
+        let active = manager.active_flat(space);
+        assert_eq!(active.len(), 1);
+    }
+
+    #[test]
+    fn test_floating_manager_multiple_spaces() {
+        let mut manager = FloatingManager::new();
+        let space1 = SpaceId::new(1);
+        let space2 = SpaceId::new(2);
+
+        manager.add_floating(w(1, 1));
+        manager.add_floating(w(1, 2));
+        manager.add_active(space1, 1, w(1, 1));
+        manager.add_active(space2, 1, w(1, 2));
+
+        let active1 = manager.active_flat(space1);
+        let active2 = manager.active_flat(space2);
+
+        assert_eq!(active1.len(), 1);
+        assert_eq!(active2.len(), 1);
+        assert_eq!(active1[0], w(1, 1));
+        assert_eq!(active2[0], w(1, 2));
+    }
+}

@@ -2806,4 +2806,82 @@ mod tests {
         assert_eq!(frame.origin.x, 0.0);
         assert_eq!(frame.origin.y, 0.0);
     }
+
+    #[test]
+    fn test_stack_layout_result_get_frame_for_index() {
+        let container_rect = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1000.0, 800.0));
+        let stack_result = StackLayoutResult::new(container_rect, 3, 50.0, true);
+
+        // Test non-focused frames
+        let frame0 = stack_result.get_frame_for_index(0);
+        let frame1 = stack_result.get_frame_for_index(1);
+        let frame2 = stack_result.get_frame_for_index(2);
+
+        assert_eq!(frame0.origin.x, 0.0);
+        assert!(frame1.origin.x > frame0.origin.x);
+        assert!(frame2.origin.x > frame1.origin.x);
+    }
+
+    #[test]
+    fn test_ascend_selection() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Horizontal);
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        // Select should be at w(2)
+        assert_eq!(system.selected_window(layout), Some(w(2)));
+
+        // Ascend should move selection up
+        let result = system.ascend_selection(layout);
+        assert!(result);
+    }
+
+    #[test]
+    fn test_descend_selection() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Horizontal);
+
+        system.add_window_after_selection(layout, w(1));
+
+        // Just verify descend_selection doesn't panic
+        // After adding a window, selection is at the window node
+        let _ = system.descend_selection(layout);
+    }
+
+    #[test]
+    fn test_rebalance() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Horizontal);
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+        system.add_window_after_selection(layout, w(3));
+
+        system.rebalance(layout);
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 3);
+    }
+
+    #[test]
+    fn test_toggle_fullscreen_within_gaps() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Horizontal);
+
+        system.add_window_after_selection(layout, w(1));
+
+        let windows = system.toggle_fullscreen_within_gaps_of_selection(layout);
+        assert_eq!(windows.len(), 1);
+        assert_eq!(windows[0], w(1));
+    }
 }

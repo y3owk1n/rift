@@ -1068,4 +1068,122 @@ mod tests {
             RemovedChild(t.child2),
         ]);
     }
+
+    #[test]
+    fn self_link_prevention() {
+        let mut t = TestTree::new();
+        t.root.detach(&mut t.tree).push_back(t.root);
+        t.assert_children_are([t.child1, t.child2, t.child3], t.root);
+    }
+
+    #[test]
+    fn single_child_tree() {
+        let mut tree = Tree::with_observer(Events(vec![]));
+        let mut root_node = OwnedNode::new_root_in(&mut tree, "root");
+        let root = root_node.id();
+        let child = tree.mk_node().push_back(root);
+        assert_eq!(0, child.children(&tree.map).count());
+        assert_eq!(1, root.children(&tree.map).count());
+        assert_eq!(Some(root), child.parent(&tree.map));
+        root_node.remove(&mut tree);
+    }
+
+    #[test]
+    fn empty_tree_operations() {
+        let tree: Tree<()> = Tree::new();
+        assert!(tree.map.map.is_empty());
+    }
+
+    #[test]
+    fn sibling_iteration() {
+        let mut t = TestTree::new();
+        let siblings: Vec<NodeId> = t.child1.children(&t.tree.map).collect();
+        assert!(siblings.is_empty());
+
+        let siblings: Vec<NodeId> = t.root.children(&t.tree.map).collect();
+        assert_eq!(3, siblings.len());
+
+        for sibling in &siblings {
+            let prev = sibling.prev_sibling(&t.tree.map);
+            let next = sibling.next_sibling(&t.tree.map);
+            if sibling == &t.child1 {
+                assert!(prev.is_none());
+                assert_eq!(Some(t.child2), next);
+            } else if sibling == &t.child2 {
+                assert_eq!(Some(t.child1), prev);
+                assert_eq!(Some(t.child3), next);
+            } else if sibling == &t.child3 {
+                assert_eq!(Some(t.child2), prev);
+                assert!(next.is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn last_child_and_first_child() {
+        let mut t = TestTree::new();
+        assert_eq!(Some(t.child1), t.root.first_child(&t.tree.map));
+        assert_eq!(Some(t.child3), t.root.last_child(&t.tree.map));
+        assert_eq!(Some(t.gc1), t.child2.first_child(&t.tree.map));
+        assert_eq!(Some(t.gc1), t.child2.last_child(&t.tree.map));
+    }
+
+    #[test]
+    fn is_empty_on_various_nodes() {
+        let mut t = TestTree::new();
+        assert!(!t.root.is_empty(&t.tree.map));
+        assert!(t.child1.is_empty(&t.tree.map));
+        assert!(!t.child2.is_empty(&t.tree.map));
+        assert!(t.gc1.is_empty(&t.tree.map));
+        assert!(t.child3.is_empty(&t.tree.map));
+    }
+
+    #[test]
+    fn deep_copy_preserves_structure() {
+        let mut t = TestTree::new();
+        let copied_root = t.root.deep_copy(&mut t.tree).id;
+
+        let orig_preorder: Vec<NodeId> = t.root.traverse_preorder(&t.tree.map).collect();
+        let copied_preorder: Vec<NodeId> = copied_root.traverse_preorder(&t.tree.map).collect();
+
+        assert_eq!(orig_preorder.len(), copied_preorder.len());
+
+        for (orig, copied) in orig_preorder.iter().zip(copied_preorder.iter()) {
+            let orig_children: Vec<NodeId> = orig.children(&t.tree.map).collect();
+            let copied_children: Vec<NodeId> = copied.children(&t.tree.map).collect();
+            assert_eq!(orig_children.len(), copied_children.len());
+        }
+    }
+
+    #[test]
+    fn node_capacity() {
+        let mut tree = Tree::with_observer(());
+        tree.map.reserve(100);
+        assert!(tree.map.capacity() >= 100);
+    }
+
+    #[test]
+    fn node_contains() {
+        let mut t = TestTree::new();
+        assert!(t.tree.map.contains(t.root));
+        assert!(t.tree.map.contains(t.child1));
+        assert!(!t.tree.map.contains(NodeId::default()));
+    }
+
+    #[test]
+    fn move_subtree_to_different_parent() {
+        let mut t = TestTree::new();
+        t.child1.detach(&mut t.tree).push_back(t.child2);
+        t.assert_children_are([t.child2, t.child3], t.root);
+        t.assert_children_are([t.gc1, t.child1], t.child2);
+    }
+
+    #[test]
+    fn remove_root_fails_on_non_root() {
+        let mut t = TestTree::new();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            t.child1.remove_root(&mut t.tree);
+        }));
+        assert!(result.is_err());
+    }
 }

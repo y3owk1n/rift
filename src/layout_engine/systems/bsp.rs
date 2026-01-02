@@ -527,6 +527,217 @@ mod tests {
         assert_eq!(system.window_in_direction(layout, Direction::Down), Some(w(1)));
         assert_eq!(system.window_in_direction(layout, Direction::Up), Some(w(2)));
     }
+
+    #[test]
+    fn bsp_create_and_remove_layout() {
+        let mut system = BspLayoutSystem::default();
+        let layout1 = system.create_layout();
+        let layout2 = system.create_layout();
+
+        assert_ne!(layout1, layout2);
+
+        system.remove_layout(layout1);
+        assert!(system.layouts.get(layout1).is_none());
+
+        let layout3 = system.create_layout();
+        assert_ne!(layout2, layout3);
+    }
+
+    #[test]
+    fn bsp_add_single_window() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+        system.add_window_after_selection(layout, w(1));
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 1);
+        assert_eq!(visible[0], w(1));
+
+        let selected = system.selected_window(layout);
+        assert_eq!(selected, Some(w(1)));
+    }
+
+    #[test]
+    fn bsp_add_multiple_windows() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+        system.add_window_after_selection(layout, w(3));
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 3);
+        assert!(visible.contains(&w(1)));
+        assert!(visible.contains(&w(2)));
+        assert!(visible.contains(&w(3)));
+    }
+
+    #[test]
+    fn bsp_remove_window() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+        system.add_window_after_selection(layout, w(3));
+
+        system.remove_window(w(2));
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 2);
+        assert!(visible.contains(&w(1)));
+        assert!(visible.contains(&w(3)));
+        assert!(!visible.contains(&w(2)));
+    }
+
+    #[test]
+    fn bsp_contains_window() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+
+        assert!(system.contains_window(layout, w(1)));
+        assert!(!system.contains_window(layout, w(999)));
+    }
+
+    #[test]
+    fn bsp_select_window() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        assert_eq!(system.selected_window(layout), Some(w(2)));
+
+        let result = system.select_window(layout, w(1));
+        assert!(result);
+        assert_eq!(system.selected_window(layout), Some(w(1)));
+    }
+
+    #[test]
+    fn bsp_move_focus() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        // Focus movement in BSP - just verify it doesn't panic
+        // Result depends on tree structure and direction
+        let _ = system.move_focus(layout, Direction::Right);
+        let _ = system.move_focus(layout, Direction::Left);
+    }
+
+    #[test]
+    fn bsp_move_selection() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        // Just verify it doesn't panic
+        let _ = system.move_selection(layout, Direction::Right);
+        let _ = system.move_selection(layout, Direction::Left);
+    }
+
+    #[test]
+    fn bsp_swap_windows() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let result = system.swap_windows(layout, w(1), w(2));
+        assert!(result);
+
+        assert_eq!(system.selected_window(layout), Some(w(1)));
+    }
+
+    #[test]
+    fn bsp_toggle_fullscreen() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+
+        let windows = system.toggle_fullscreen_of_selection(layout);
+        assert_eq!(windows.len(), 1);
+        assert_eq!(windows[0], w(1));
+    }
+
+    #[test]
+    fn bsp_toggle_orientation() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        system.toggle_tile_orientation(layout);
+
+        assert_eq!(system.window_in_direction(layout, Direction::Down), Some(w(1)));
+        assert_eq!(system.window_in_direction(layout, Direction::Up), Some(w(2)));
+    }
+
+    #[test]
+    fn bsp_resize_selection() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        system.resize_selection_by(layout, 0.1);
+    }
+
+    #[test]
+    fn bsp_clone_layout() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let cloned = system.clone_layout(layout);
+
+        let orig_windows = system.visible_windows_in_layout(layout);
+        let cloned_windows = system.visible_windows_in_layout(cloned);
+        assert_eq!(orig_windows.len(), cloned_windows.len());
+    }
+
+    #[test]
+    fn bsp_remove_windows_for_app() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, WindowId::new(2, 1));
+        system.add_window_after_selection(layout, w(2));
+
+        system.remove_windows_for_app(1);
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 1);
+        assert_eq!(visible[0], WindowId::new(2, 1));
+    }
+
+    #[test]
+    fn bsp_has_windows_for_app() {
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, WindowId::new(2, 1));
+
+        assert!(system.has_windows_for_app(layout, 1));
+        assert!(system.has_windows_for_app(layout, 2));
+        assert!(!system.has_windows_for_app(layout, 999));
+    }
 }
 
 impl LayoutSystem for BspLayoutSystem {

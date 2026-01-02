@@ -2050,4 +2050,38 @@ mod tests {
             None
         );
     }
+
+    #[test]
+    fn test_layout_engine_initial_state() {
+        let settings = crate::common::config::VirtualWorkspaceSettings::default();
+        let layout_settings = crate::common::config::LayoutSettings::default();
+        let engine = LayoutEngine::new(&settings, &layout_settings, None);
+
+        assert!(engine.layout_mode() == "traditional" || engine.layout_mode() == "bsp");
+    }
+
+    #[test]
+    fn test_set_layout_settings() {
+        let settings = crate::common::config::VirtualWorkspaceSettings::default();
+        let layout_settings = crate::common::config::LayoutSettings::default();
+        let mut engine = LayoutEngine::new(&settings, &layout_settings, None);
+
+        let mut new_settings = crate::common::config::LayoutSettings::default();
+        new_settings.gaps.outer.top = 20.0;
+        new_settings.gaps.outer.left = 20.0;
+
+        engine.set_layout_settings(&new_settings);
+        assert_eq!(engine.layout_settings.gaps.outer.top, 20.0);
+        assert_eq!(engine.layout_settings.gaps.outer.left, 20.0);
+    }
+
+    #[test]
+    fn test_workspace_layouts_initialization() {
+        let settings = crate::common::config::VirtualWorkspaceSettings::default();
+        let layout_settings = crate::common::config::LayoutSettings::default();
+        let engine = LayoutEngine::new(&settings, &layout_settings, None);
+
+        let stats = engine.virtual_workspace_manager.get_stats();
+        assert!(stats.total_workspaces >= 0);
+    }
 }
