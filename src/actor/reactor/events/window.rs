@@ -119,11 +119,19 @@ impl WindowEventHandler {
                 return true;
             };
 
-            if let Some(replacement_wid) = reactor.last_focused_window_in_space(active_space) {
+            let replacement_wid = reactor.last_focused_window_in_space(active_space).or_else(|| {
+                reactor
+                    .layout_manager
+                    .visible_windows_in_space(active_space)
+                    .first()
+                    .copied()
+            });
+
+            if let Some(replacement_wid) = replacement_wid {
                 debug!(
                     ?wid,
                     ?replacement_wid,
-                    "Last window of app closed, focusing last focused window in space"
+                    "Last window of app closed, focusing replacement window"
                 );
                 reactor.raise_window(replacement_wid, Quiet::No, None);
             } else {

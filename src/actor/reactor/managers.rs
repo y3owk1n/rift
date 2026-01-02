@@ -214,6 +214,11 @@ pub type LayoutResult = Vec<(SpaceId, Vec<(WindowId, CGRect)>)>;
 
 impl LayoutManager {
     #[inline]
+    pub fn visible_windows_in_space(&self, space: SpaceId) -> Vec<WindowId> {
+        self.layout_engine.visible_windows_in_space(space)
+    }
+
+    #[inline]
     pub fn update_layout(
         reactor: &mut Reactor,
         is_resize: bool,

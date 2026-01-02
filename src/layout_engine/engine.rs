@@ -133,6 +133,19 @@ impl LayoutEngine {
         }
     }
 
+    pub fn visible_windows_in_space(&self, space: SpaceId) -> Vec<WindowId> {
+        let workspace_id = match self.virtual_workspace_manager.active_workspace(space) {
+            Some(ws) => ws,
+            None => return Vec::new(),
+        };
+
+        let Some(layout) = self.workspace_layouts.active(space, workspace_id) else {
+            return Vec::new();
+        };
+
+        self.filter_active_workspace_windows(space, self.tree.visible_windows_in_layout(layout))
+    }
+
     fn active_floating_windows_in_workspace(&self, space: SpaceId) -> Vec<WindowId> {
         self.floating
             .active_flat(space)
