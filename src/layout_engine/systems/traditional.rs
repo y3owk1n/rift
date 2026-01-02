@@ -394,7 +394,7 @@ impl LayoutSystem for TraditionalLayoutSystem {
         stack_line_horiz: crate::common::config::HorizontalPlacement,
         stack_line_vert: crate::common::config::VerticalPlacement,
     ) -> Vec<(WindowId, CGRect)> {
-        let mut sizes = vec![];
+        let mut sizes = Vec::with_capacity(16);
         let tiling_area = compute_tiling_area(screen, gaps);
 
         self.tree.data.layout.apply_with_gaps(
@@ -1386,8 +1386,9 @@ impl TraditionalLayoutSystem {
     }
 
     fn visible_windows_under_internal(&self, node: NodeId) -> Vec<WindowId> {
-        let mut stack = vec![node];
-        let mut windows = vec![];
+        let mut stack = Vec::with_capacity(16);
+        stack.push(node);
+        let mut windows = Vec::with_capacity(16);
         while let Some(node) = stack.pop() {
             if self.layout(node).is_group() {
                 stack.extend(self.tree.data.selection.local_selection(self.map(), node));

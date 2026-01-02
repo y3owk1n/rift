@@ -654,7 +654,7 @@ impl Reactor {
     }
 
     async fn run_reactor_loop(mut self, mut events: Receiver) {
-        let mut pending_events: Vec<(Span, Event)> = Vec::new();
+        let mut pending_events: Vec<(Span, Event)> = Vec::with_capacity(64);
         let mut coalesce_timer = Timer::repeating(Duration::ZERO, Duration::from_millis(5));
 
         loop {

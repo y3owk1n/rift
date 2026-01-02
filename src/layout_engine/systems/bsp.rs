@@ -749,7 +749,7 @@ impl LayoutSystem for BspLayoutSystem {
 
     /// shallow
     fn clone_layout(&mut self, layout: LayoutId) -> LayoutId {
-        let mut windows = Vec::new();
+        let mut windows = Vec::with_capacity(16);
         if let Some(state) = self.layouts.get(layout).copied() {
             self.collect_windows_under(state.root, &mut windows);
         }
@@ -762,7 +762,7 @@ impl LayoutSystem for BspLayoutSystem {
 
     fn remove_layout(&mut self, layout: LayoutId) {
         if let Some(state) = self.layouts.remove(layout) {
-            let mut windows = Vec::new();
+            let mut windows = Vec::with_capacity(16);
             self.collect_windows_under(state.root, &mut windows);
             for w in windows {
                 self.window_to_node.remove(&w);
@@ -944,7 +944,7 @@ impl LayoutSystem for BspLayoutSystem {
         let desired_set: HashSet<WindowId> = desired.iter().copied().collect();
         let mut current_set: HashSet<WindowId> = HashSet::default();
         if let Some(state) = self.layouts.get(layout).copied() {
-            let mut under: Vec<WindowId> = Vec::new();
+            let mut under: Vec<WindowId> = Vec::with_capacity(16);
             self.collect_windows_under(state.root, &mut under);
             for w in under.into_iter().filter(|w| w.pid == pid) {
                 current_set.insert(w);
@@ -974,7 +974,7 @@ impl LayoutSystem for BspLayoutSystem {
 
     fn has_windows_for_app(&self, layout: LayoutId, pid: pid_t) -> bool {
         if let Some(state) = self.layouts.get(layout).copied() {
-            let mut under = Vec::new();
+            let mut under = Vec::with_capacity(16);
             self.collect_windows_under(state.root, &mut under);
             under.into_iter().any(|w| w.pid == pid)
         } else {
@@ -1285,7 +1285,7 @@ impl LayoutSystem for BspLayoutSystem {
             return;
         };
 
-        let mut windows: Vec<WindowId> = Vec::new();
+        let mut windows: Vec<WindowId> = Vec::with_capacity(16);
         self.collect_windows_under(parent, &mut windows);
         if windows.is_empty() {
             return;

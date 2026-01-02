@@ -1219,7 +1219,7 @@ impl LayoutEngine {
     {
         use crate::model::HideCorner;
 
-        let mut positions = HashMap::default();
+        let mut positions = HashMap::with_capacity_and_hasher(32, Default::default());
         let window_size = |wid| {
             get_window_frame(wid)
                 .map(|f| f.size)
@@ -1397,7 +1397,7 @@ impl LayoutEngine {
         stack_line_horiz: crate::common::config::HorizontalPlacement,
         stack_line_vert: crate::common::config::VerticalPlacement,
     ) -> Vec<(WindowId, CGRect)> {
-        let mut positions = HashMap::default();
+        let mut positions = HashMap::with_capacity_and_hasher(32, Default::default());
 
         if let Some(layout) = self.workspace_layouts.active(space, workspace_id) {
             let tiled_positions = self.tree.calculate_layout(
