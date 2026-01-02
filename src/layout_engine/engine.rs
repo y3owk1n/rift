@@ -1070,7 +1070,7 @@ impl LayoutEngine {
                 let visible_windows = self.tree.visible_windows_in_layout(layout);
                 if !visible_windows.is_empty() {
                     EventResponse {
-                        raise_windows,
+                        raise_windows: vec![],
                         focus_window: None,
                         workspace_changed_to: None,
                     }
@@ -1094,11 +1094,11 @@ impl LayoutEngine {
                             let toggled_windows = s
                                 .apply_stacking_to_parent_of_selection(layout, default_orientation);
                             if !toggled_windows.is_empty() {
-                    EventResponse {
-                        raise_windows,
-                        focus_window: None,
-                        workspace_changed_to: None,
-                    }
+                                EventResponse {
+                                    raise_windows: vec![],
+                                    focus_window: None,
+                                    workspace_changed_to: None,
+                                }
                             } else {
                                 EventResponse::default()
                             }
@@ -1635,32 +1635,39 @@ impl LayoutEngine {
                         raise_windows: vec![],
                         workspace_changed_to: None,
                     };
-                } else if Some(current_workspace_id) == active_workspace {
-                    self.focused_window = None;
-                    self.virtual_workspace_manager.set_last_focused_window(
-                        op_space,
-                        current_workspace_id,
-                        None,
-                    );
-
-                    let remaining_windows =
-                        self.virtual_workspace_manager.windows_in_active_workspace(op_space);
-                    if let Some(&new_focus) = remaining_windows.first() {
-                        return EventResponse {
-                            focus_window: Some(new_focus),
-                            raise_windows: vec![],
-                            workspace_changed_to: None,
-                        };
-                    }
                 }
 
+                self.focused_window = None;
                 self.virtual_workspace_manager.set_last_focused_window(
                     op_space,
-                    target_workspace_id,
-                    Some(focused_window),
+                    current_workspace_id,
+                    None,
                 );
 
-                self.broadcast_windows_changed(op_space);
+                let remaining_windows =
+                    self.virtual_workspace_manager.windows_in_active_workspace(op_space);
+
+                if Some(target_workspace_id) != active_workspace {
+                    self.virtual_workspace_manager.set_last_focused_window(
+                        op_space,
+                        target_workspace_id,
+                        Some(focused_window),
+                    );
+                    return EventResponse {
+                        workspace_changed_to: Some(target_workspace_id),
+                        focus_window: Some(focused_window),
+                        raise_windows: vec![],
+                    };
+                }
+
+                if let Some(&new_focus) = remaining_windows.first() {
+                    return EventResponse {
+                        focus_window: Some(new_focus),
+                        raise_windows: vec![],
+                        workspace_changed_to: None,
+                    };
+                }
+
                 EventResponse::default()
             }
             LayoutCommand::CreateWorkspace => {

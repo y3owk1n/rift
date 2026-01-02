@@ -78,13 +78,63 @@ impl CommandEventHandler {
             }
             LayoutCommand::MoveWindowToWorkspace { .. } => {
                 if let Some(space) = reactor.workspace_command_space() {
-                    reactor
+                    let response = reactor
                         .layout_manager
                         .layout_engine
-                        .handle_virtual_workspace_command(space, &cmd)
-                } else {
-                    EventResponse::default()
+                        .handle_virtual_workspace_command(space, &cmd);
+
+                    if let Some(target_workspace_id) = response.workspace_changed_to {
+                        let moved_window = response.focus_window;
+                        let workspaces = reactor
+                            .layout_manager
+                            .layout_engine
+                            .virtual_workspace_manager_mut()
+                            .list_workspaces(space);
+
+                        if let Some((workspace_index, _)) =
+                            workspaces.iter().enumerate().find(|(_, (ws_id, _))| *ws_id == target_workspace_id)
+                        {
+                            reactor.store_current_floating_positions(space);
+                            reactor
+                                .workspace_switch_manager
+                                .start_workspace_switch(WorkspaceSwitchOrigin::Auto);
+
+                            let _switch_response = reactor
+                                .layout_manager
+                                .layout_engine
+                                .handle_virtual_workspace_command(
+                                    space,
+                                    &LayoutCommand::SwitchToWorkspace(workspace_index),
+                                );
+
+                            if let Some(ws_id) = workspaces.get(workspace_index).map(|(id, _)| *id) {
+                                reactor.layout_manager.layout_engine.virtual_workspace_manager_mut()
+                                    .set_active_workspace(space, ws_id);
+                                reactor.layout_manager.layout_engine.update_active_floating_windows(space);
+                                reactor.layout_manager.layout_engine.broadcast_workspace_changed(space);
+                                reactor.layout_manager.layout_engine.broadcast_windows_changed(space);
+
+                                if let Some(mw) = moved_window {
+                                    reactor.layout_manager.layout_engine.set_focused_window(mw);
+                                    reactor.layout_manager.layout_engine.virtual_workspace_manager_mut()
+                                        .set_last_focused_window(space, ws_id, Some(mw));
+                                }
+                            }
+
+                            let final_response = EventResponse {
+                                raise_windows: moved_window.map(|w| vec![w]).unwrap_or_default(),
+                                focus_window: moved_window,
+                                workspace_changed_to: None,
+                            };
+
+                            reactor.handle_layout_response(final_response, Some(space));
+                            return;
+                        }
+                    }
+
+                    reactor.handle_layout_response(response, None);
                 }
+                EventResponse::default()
             }
             _ => reactor.layout_manager.layout_engine.handle_command(
                 reactor.workspace_command_space(),

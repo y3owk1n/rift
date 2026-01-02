@@ -267,6 +267,7 @@ fn handle_layout_response_groups_windows_by_app_and_screen() {
                 WindowId::new(2, 2),
             ],
             focus_window: None,
+            workspace_changed_to: None,
         },
         None,
     );
@@ -312,6 +313,7 @@ fn handle_layout_response_includes_handles_for_raise_and_focus_windows() {
         layout::EventResponse {
             raise_windows: vec![WindowId::new(1, 1)],
             focus_window: Some(WindowId::new(2, 1)),
+            workspace_changed_to: None,
         },
         None,
     );
