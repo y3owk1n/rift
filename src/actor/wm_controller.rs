@@ -558,9 +558,24 @@ impl WmController {
             return;
         }
 
-        if !self.spawning_apps.insert(pid) {
-            debug!(pid = ?pid, "App already spawning; skipping duplicate");
-            return;
+        let was_already_spawning = !self.spawning_apps.insert(pid);
+        if was_already_spawning {
+            debug!(pid = ?pid, "App already spawning; checking if deferred conditions are now met");
+            let Some(running_app) = NSRunningApplication::with_process_id(pid) else {
+                debug!(pid = ?pid, "Failed to resolve NSRunningApplication for retrying app");
+                return;
+            };
+            if running_app.activationPolicy() != NSApplicationActivationPolicy::Regular
+                && info.bundle_id.as_deref() != Some("com.apple.loginwindow")
+            {
+                debug!(pid = ?pid, "App still not regular; skipping retry");
+                return;
+            }
+            if !running_app.isFinishedLaunching() {
+                debug!(pid = ?pid, "App still not finished launching; skipping retry");
+                return;
+            }
+            debug!(pid = ?pid, "Deferred conditions now met; proceeding with spawn");
         }
 
         let Some(running_app) = NSRunningApplication::with_process_id(pid) else {
