@@ -286,9 +286,13 @@ impl LayoutManager {
             .or(reactor.drag_manager.drag_swap_manager.dragged());
         let mut any_frame_changed = false;
 
+        let stack_line_enabled = reactor.config_manager.config.settings.ui.stack_line.enabled;
+        let stack_line_thickness = reactor.config_manager.config.settings.ui.stack_line.thickness();
+        let stack_line_horiz = reactor.config_manager.config.settings.ui.stack_line.horiz_placement;
+        let stack_line_vert = reactor.config_manager.config.settings.ui.stack_line.vert_placement;
+
         for (space, layout) in layout_result {
-            // Handle stack_line
-            if reactor.config_manager.config.settings.ui.stack_line.enabled {
+            if stack_line_enabled {
                 if let Some(tx) = &reactor.communication_manager.stack_line_tx {
                     let screen = reactor.space_manager.screen_by_space(space);
                     if let Some(screen) = screen {
@@ -311,15 +315,9 @@ impl LayoutManager {
                                 space,
                                 screen.frame,
                                 &gaps,
-                                reactor.config_manager.config.settings.ui.stack_line.thickness(),
-                                reactor
-                                    .config_manager
-                                    .config
-                                    .settings
-                                    .ui
-                                    .stack_line
-                                    .horiz_placement,
-                                reactor.config_manager.config.settings.ui.stack_line.vert_placement,
+                                stack_line_thickness,
+                                stack_line_horiz,
+                                stack_line_vert,
                             );
 
                         let groups: Vec<crate::actor::stack_line::GroupInfo> = group_infos
