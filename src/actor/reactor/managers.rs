@@ -234,6 +234,13 @@ impl LayoutManager {
         let screens = reactor.space_manager.screens.clone();
         let mut layout_result = LayoutResult::new();
 
+        let stack_line_thickness = reactor.config_manager.config.settings.ui.stack_line.thickness();
+        let stack_line_horiz = reactor.config_manager.config.settings.ui.stack_line.horiz_placement;
+        let stack_line_vert = reactor.config_manager.config.settings.ui.stack_line.vert_placement;
+        let get_window_frame = |wid: WindowId| {
+            reactor.window_manager.windows.get(&wid).map(|w| w.frame_monotonic)
+        };
+
         for screen in screens {
             let Some(space) = reactor.space_manager.space_for_screen(&screen) else {
                 continue;
@@ -259,10 +266,10 @@ impl LayoutManager {
                     space,
                     screen.frame.clone(),
                     &gaps,
-                    reactor.config_manager.config.settings.ui.stack_line.thickness(),
-                    reactor.config_manager.config.settings.ui.stack_line.horiz_placement,
-                    reactor.config_manager.config.settings.ui.stack_line.vert_placement,
-                    |wid| reactor.window_manager.windows.get(&wid).map(|w| w.frame_monotonic),
+                    stack_line_thickness,
+                    stack_line_horiz,
+                    stack_line_vert,
+                    &get_window_frame,
                 );
             layout_result.push((space, layout));
         }
