@@ -2559,10 +2559,12 @@ impl Reactor {
         }
     }
 
+    #[inline]
     fn main_window(&self) -> Option<WindowId> {
         self.main_window_tracker_manager.main_window_tracker.main_window()
     }
 
+    #[inline]
     fn main_window_space(&self) -> Option<SpaceId> {
         // TODO: Optimize this with a cache or something.
         let wid = self.main_window()?;

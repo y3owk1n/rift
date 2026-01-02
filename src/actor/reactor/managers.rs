@@ -215,6 +215,7 @@ pub struct LayoutManager {
 pub type LayoutResult = Vec<(SpaceId, Vec<(WindowId, CGRect)>)>;
 
 impl LayoutManager {
+    #[inline]
     pub fn update_layout(
         reactor: &mut Reactor,
         is_resize: bool,
@@ -224,6 +225,7 @@ impl LayoutManager {
         Self::apply_layout(reactor, layout_result, is_resize, is_workspace_switch)
     }
 
+    #[inline]
     fn calculate_layout(reactor: &mut Reactor) -> LayoutResult {
         if reactor.window_manager.windows.is_empty() {
             return LayoutResult::new();
@@ -268,6 +270,7 @@ impl LayoutManager {
         layout_result
     }
 
+    #[inline]
     fn apply_layout(
         reactor: &mut Reactor,
         layout_result: LayoutResult,
