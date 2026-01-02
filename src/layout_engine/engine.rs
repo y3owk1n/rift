@@ -93,6 +93,7 @@ pub enum LayoutEvent {
 pub struct EventResponse {
     pub raise_windows: Vec<WindowId>,
     pub focus_window: Option<WindowId>,
+    pub workspace_changed_to: Option<VirtualWorkspaceId>,
 }
 
 #[derive(Serialize, Deserialize)]
