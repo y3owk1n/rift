@@ -1871,6 +1871,7 @@ impl Reactor {
         let layout::EventResponse {
             raise_windows,
             mut focus_window,
+            ..
         } = response;
         let original_focus = focus_window;
 
