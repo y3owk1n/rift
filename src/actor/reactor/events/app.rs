@@ -1,7 +1,7 @@
 use tracing::{debug, warn};
 
 use crate::actor::app::{AppInfo, AppThreadHandle, Quiet, WindowId};
-use crate::actor::reactor::{AppState, Reactor};
+use crate::actor::reactor::{AppState, Event, Reactor};
 use crate::sys::app::WindowInfo;
 use crate::sys::window_server::{self as window_server, WindowServerId, WindowServerInfo};
 
@@ -59,19 +59,27 @@ impl AppEventHandler {
     }
 
     pub fn handle_application_thread_terminated(reactor: &mut Reactor, pid: i32) {
-        // The app actor thread has terminated; remove the stored handle
-        // so we don't try to communicate with a dead thread. Do NOT
-        // perform per-app window bookkeeping here (e.g. sending
-        // LayoutEvent::AppClosed) — a thread exit may be transient and
-        // should not cause the layout engine to drop windows for the
-        // application. Full application termination (Event::ApplicationTerminated)
-        // is responsible for informing other subsystems when windows
-        // should be removed.
-        // Notify the WM controller that the app thread exited so it can
-        // clear any tracking (e.g. known_apps) and allow future launches.
         if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() {
             wm.send(crate::actor::wm_controller::WmEvent::AppThreadTerminated(pid));
         }
+
+        let windows_to_remove: Vec<WindowId> = reactor
+            .window_manager
+            .windows
+            .iter()
+            .filter_map(|(&wid, _)| {
+                if wid.pid == pid {
+                    Some(wid)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for wid in &windows_to_remove {
+            reactor.handle_event(Event::WindowDestroyed(*wid));
+        }
+
         reactor.app_manager.apps.remove(&pid);
     }
 
