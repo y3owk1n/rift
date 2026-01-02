@@ -553,8 +553,13 @@ impl WmController {
             self.login_window_pid = Some(pid);
         }
 
-        if self.known_apps.contains(&pid) || self.spawning_apps.contains(&pid) {
+        if self.known_apps.contains(&pid) {
             debug!(pid = ?pid, "Duplicate AppLaunch received; skipping spawn");
+            return;
+        }
+
+        if !self.spawning_apps.insert(pid) {
+            debug!(pid = ?pid, "App already spawning; skipping duplicate");
             return;
         }
 
@@ -594,8 +599,6 @@ impl WmController {
                 return;
             }
         }
-
-        self.spawning_apps.insert(pid);
 
         actor::app::spawn_app_thread(
             pid,
