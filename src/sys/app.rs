@@ -1,6 +1,6 @@
 use std::cell::Cell;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::ffi::c_void;
 use std::path::PathBuf;
 use std::sync::Arc;

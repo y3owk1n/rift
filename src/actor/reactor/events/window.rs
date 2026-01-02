@@ -119,13 +119,10 @@ impl WindowEventHandler {
                 return true;
             };
 
-            let replacement_wid = reactor.last_focused_window_in_space(active_space).or_else(|| {
-                reactor
-                    .layout_manager
-                    .visible_windows_in_space(active_space)
-                    .first()
-                    .copied()
-            });
+            let replacement_wid =
+                reactor.last_focused_window_in_space(active_space).or_else(|| {
+                    reactor.layout_manager.visible_windows_in_space(active_space).first().copied()
+                });
 
             if let Some(replacement_wid) = replacement_wid {
                 debug!(

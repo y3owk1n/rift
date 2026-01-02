@@ -147,8 +147,9 @@ impl<'de> DeserializeAs<'de, ic::CGRect> for CGRectDef {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+
+    use super::*;
 
     #[test]
     fn test_round_cgrect() {

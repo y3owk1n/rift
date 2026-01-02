@@ -246,16 +246,17 @@ impl VirtualWorkspaceManager {
 
             if let Some(ref bundle_id) = rule.app_id {
                 if !bundle_id.is_empty() {
-                    self.app_rules_by_bundle_id.insert(
-                        bundle_id.to_lowercase(),
-                        idx,
-                    );
+                    self.app_rules_by_bundle_id.insert(bundle_id.to_lowercase(), idx);
                 }
             }
         }
     }
 
-    pub(crate) fn ensure_space_initialized(&mut self, space: SpaceId, target_workspace_id: Option<VirtualWorkspaceId>) {
+    pub(crate) fn ensure_space_initialized(
+        &mut self,
+        space: SpaceId,
+        target_workspace_id: Option<VirtualWorkspaceId>,
+    ) {
         if self.workspaces_by_space.contains_key(&space) {
             return;
         }
@@ -1267,13 +1268,8 @@ impl VirtualWorkspaceManager {
     ) -> Option<VirtualWorkspaceId> {
         self.ensure_space_initialized(space, None);
 
-        let rule = self.find_matching_app_rule(
-            app_bundle_id,
-            app_name,
-            window_title,
-            ax_role,
-            ax_subrole,
-        );
+        let rule =
+            self.find_matching_app_rule(app_bundle_id, app_name, window_title, ax_role, ax_subrole);
 
         let ws_sel = rule.and_then(|r| r.workspace.clone());
 
@@ -1941,7 +1937,10 @@ mod tests {
         let position = CGRect::new(CGPoint::new(100.0, 100.0), CGSize::new(400.0, 300.0));
 
         manager.store_floating_position(space, ws_id, window, position);
-        assert_eq!(manager.get_floating_position(space, ws_id, window), Some(position));
+        assert_eq!(
+            manager.get_floating_position(space, ws_id, window),
+            Some(position)
+        );
 
         manager.remove_floating_position(window);
         assert_eq!(manager.get_floating_position(space, ws_id, window), None);

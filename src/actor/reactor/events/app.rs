@@ -67,13 +67,7 @@ impl AppEventHandler {
             .window_manager
             .windows
             .iter()
-            .filter_map(|(&wid, _)| {
-                if wid.pid == pid {
-                    Some(wid)
-                } else {
-                    None
-                }
-            })
+            .filter_map(|(&wid, _)| if wid.pid == pid { Some(wid) } else { None })
             .collect();
 
         for wid in &windows_to_remove {

@@ -1274,10 +1274,7 @@ impl State {
 
         self.windows
             .iter()
-            .find(|(_, w)| {
-                w.window_server_id
-                    .map_or(false, |wsid| !current_wsids.contains(&wsid))
-            })
+            .find(|(_, w)| w.window_server_id.map_or(false, |wsid| !current_wsids.contains(&wsid)))
             .map(|(&wid, _)| wid)
     }
 

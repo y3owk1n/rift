@@ -72,8 +72,9 @@ impl WindowTxStore {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use objc2_core_foundation::{CGPoint, CGSize};
+
+    use super::*;
 
     #[test]
     fn test_tx_record_default() {

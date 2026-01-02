@@ -344,7 +344,11 @@ impl LayoutEngine {
         let focus_window = self.filter_active_workspace_window(space, focus_window_raw);
         let raise_windows = self.filter_active_workspace_windows(space, raise_windows);
         if focus_window.is_some() {
-            let response = EventResponse { focus_window, raise_windows, workspace_changed_to: None };
+            let response = EventResponse {
+                focus_window,
+                raise_windows,
+                workspace_changed_to: None,
+            };
             self.apply_focus_response(space, layout, &response);
             response
         } else {
@@ -960,7 +964,11 @@ impl LayoutEngine {
                 let selection = self.tree.selected_window(layout);
                 let mut raise_windows = self.tree.visible_windows_in_layout(layout);
                 let focus_window = selection.or_else(|| raise_windows.pop());
-                let response = EventResponse { raise_windows, focus_window, workspace_changed_to: None };
+                let response = EventResponse {
+                    raise_windows,
+                    focus_window,
+                    workspace_changed_to: None,
+                };
                 self.apply_focus_response(space, layout, &response);
                 return response;
             } else {
@@ -972,7 +980,11 @@ impl LayoutEngine {
                     .filter(|wid| Some(*wid) != self.floating.last_focus())
                     .collect();
                 let focus_window = self.floating.last_focus().or_else(|| raise_windows.pop());
-                let response = EventResponse { raise_windows, focus_window, workspace_changed_to: None };
+                let response = EventResponse {
+                    raise_windows,
+                    focus_window,
+                    workspace_changed_to: None,
+                };
                 self.apply_focus_response(space, layout, &response);
                 return response;
             }

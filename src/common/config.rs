@@ -1227,7 +1227,13 @@ mod tests {
     #[test]
     fn test_workspace_settings_validation_too_many_names() {
         let mut settings = VirtualWorkspaceSettings::default();
-        settings.workspace_names = vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string(), "5".to_string()];
+        settings.workspace_names = vec![
+            "1".to_string(),
+            "2".to_string(),
+            "3".to_string(),
+            "4".to_string(),
+            "5".to_string(),
+        ];
         let issues = settings.validate();
         assert!(issues.iter().any(|i| i.contains("More workspace names provided")));
     }
@@ -1351,7 +1357,11 @@ mod tests {
         let mut settings = Settings::default();
         settings.gestures.swipe_vertical_tolerance = -1.0;
         let issues = settings.validate();
-        assert!(issues.iter().any(|i| i.contains("swipe_vertical_tolerance must be non-negative")));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.contains("swipe_vertical_tolerance must be non-negative"))
+        );
     }
 
     #[test]
@@ -1392,10 +1402,7 @@ mod tests {
             bottom: 30.0,
             right: 40.0,
         };
-        let override_inner = InnerGaps {
-            horizontal: 5.0,
-            vertical: 8.0,
-        };
+        let override_inner = InnerGaps { horizontal: 5.0, vertical: 8.0 };
         overrides.insert("display-uuid".to_string(), GapOverride {
             outer: Some(override_outer),
             inner: Some(override_inner),
@@ -1435,11 +1442,23 @@ mod tests {
         let combinations: HashMap<String, String> = [
             ("leader".to_string(), "Ctrl + Alt".to_string()),
             ("mycombo".to_string(), "Shift + Cmd".to_string()),
-        ].iter().cloned().collect();
+        ]
+        .iter()
+        .cloned()
+        .collect();
 
-        assert_eq!(Config::expand_modifier_combinations("leader + C", &combinations), "Ctrl + Alt + C");
-        assert_eq!(Config::expand_modifier_combinations("mycombo + V", &combinations), "Shift + Cmd + V");
-        assert_eq!(Config::expand_modifier_combinations("Ctrl + C", &combinations), "Ctrl + C");
+        assert_eq!(
+            Config::expand_modifier_combinations("leader + C", &combinations),
+            "Ctrl + Alt + C"
+        );
+        assert_eq!(
+            Config::expand_modifier_combinations("mycombo + V", &combinations),
+            "Shift + Cmd + V"
+        );
+        assert_eq!(
+            Config::expand_modifier_combinations("Ctrl + C", &combinations),
+            "Ctrl + C"
+        );
     }
 
     #[test]

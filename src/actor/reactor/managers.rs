@@ -238,9 +238,8 @@ impl LayoutManager {
         let stack_line_thickness = reactor.config_manager.config.settings.ui.stack_line.thickness();
         let stack_line_horiz = reactor.config_manager.config.settings.ui.stack_line.horiz_placement;
         let stack_line_vert = reactor.config_manager.config.settings.ui.stack_line.vert_placement;
-        let get_window_frame = |wid: WindowId| {
-            reactor.window_manager.windows.get(&wid).map(|w| w.frame_monotonic)
-        };
+        let get_window_frame =
+            |wid: WindowId| reactor.window_manager.windows.get(&wid).map(|w| w.frame_monotonic);
 
         for screen in screens {
             let Some(space) = reactor.space_manager.space_for_screen(&screen) else {

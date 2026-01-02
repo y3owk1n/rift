@@ -747,7 +747,10 @@ mod test {
         // Force a rebuild by getting a fresh state
         cache.mark_dirty();
         let (descriptors, converter, _) = cache.refresh().unwrap();
-        assert!(descriptors.is_empty(), "Expected no descriptors when no displays");
+        assert!(
+            descriptors.is_empty(),
+            "Expected no descriptors when no displays"
+        );
         assert!(cache.uuids.is_empty(), "Expected UUID cache to be cleared");
         assert!(converter.convert_point(CGPoint::new(0.0, 0.0)).is_none());
     }

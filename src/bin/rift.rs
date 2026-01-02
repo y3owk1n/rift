@@ -261,23 +261,24 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
 
     let events_tx_for_signal = events_tx.clone();
     std::thread::spawn(move || {
-        use std::sync::atomic::{AtomicBool, Ordering};
         use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
 
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
 
         ctrlc::set_handler(move || {
             r.store(false, Ordering::SeqCst);
-        }).expect("Error setting Ctrl+C handler");
+        })
+        .expect("Error setting Ctrl+C handler");
 
         while running.load(Ordering::SeqCst) {
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
 
-        let _ = events_tx_for_signal.send(
-            reactor::Event::Command(reactor::Command::Reactor(reactor::ReactorCommand::SaveAndExit)),
-        );
+        let _ = events_tx_for_signal.send(reactor::Event::Command(reactor::Command::Reactor(
+            reactor::ReactorCommand::SaveAndExit,
+        )));
     });
 
     let _executor_session = Executor::run_main(mtm, async move {

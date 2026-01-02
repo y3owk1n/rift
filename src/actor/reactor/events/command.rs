@@ -91,8 +91,10 @@ impl CommandEventHandler {
                             .virtual_workspace_manager_mut()
                             .list_workspaces(space);
 
-                        if let Some((workspace_index, _)) =
-                            workspaces.iter().enumerate().find(|(_, (ws_id, _))| *ws_id == target_workspace_id)
+                        if let Some((workspace_index, _)) = workspaces
+                            .iter()
+                            .enumerate()
+                            .find(|(_, (ws_id, _))| *ws_id == target_workspace_id)
                         {
                             reactor.store_current_floating_positions(space);
                             reactor
@@ -107,16 +109,32 @@ impl CommandEventHandler {
                                     &LayoutCommand::SwitchToWorkspace(workspace_index),
                                 );
 
-                            if let Some(ws_id) = workspaces.get(workspace_index).map(|(id, _)| *id) {
-                                reactor.layout_manager.layout_engine.virtual_workspace_manager_mut()
+                            if let Some(ws_id) = workspaces.get(workspace_index).map(|(id, _)| *id)
+                            {
+                                reactor
+                                    .layout_manager
+                                    .layout_engine
+                                    .virtual_workspace_manager_mut()
                                     .set_active_workspace(space, ws_id);
-                                reactor.layout_manager.layout_engine.update_active_floating_windows(space);
-                                reactor.layout_manager.layout_engine.broadcast_workspace_changed(space);
-                                reactor.layout_manager.layout_engine.broadcast_windows_changed(space);
+                                reactor
+                                    .layout_manager
+                                    .layout_engine
+                                    .update_active_floating_windows(space);
+                                reactor
+                                    .layout_manager
+                                    .layout_engine
+                                    .broadcast_workspace_changed(space);
+                                reactor
+                                    .layout_manager
+                                    .layout_engine
+                                    .broadcast_windows_changed(space);
 
                                 if let Some(mw) = moved_window {
                                     reactor.layout_manager.layout_engine.set_focused_window(mw);
-                                    reactor.layout_manager.layout_engine.virtual_workspace_manager_mut()
+                                    reactor
+                                        .layout_manager
+                                        .layout_engine
+                                        .virtual_workspace_manager_mut()
                                         .set_last_focused_window(space, ws_id, Some(mw));
                                 }
                             }

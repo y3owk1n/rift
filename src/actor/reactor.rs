@@ -36,7 +36,7 @@ pub use replay::{Record, replay};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_with::serde_as;
-use tracing::{debug, instrument, trace, warn, Span};
+use tracing::{Span, debug, instrument, trace, warn};
 use transaction_manager::TransactionId;
 
 use super::event_tap;
@@ -1177,9 +1177,7 @@ impl Reactor {
                     .target_workspace_for_app_info(
                         space,
                         app_info.as_ref().and_then(|a| a.bundle_id.as_deref()),
-                        app_info
-                            .as_ref()
-                            .and_then(|a| a.localized_name.as_deref()),
+                        app_info.as_ref().and_then(|a| a.localized_name.as_deref()),
                         window_info.map(|w| w.title.as_str()),
                         window_info.and_then(|w| w.ax_role.as_deref()),
                         window_info.and_then(|w| w.ax_subrole.as_deref()),
@@ -2493,7 +2491,11 @@ impl Reactor {
                     }
                 }
                 if window_server::get_window(wsid).is_none() {
-                    trace!(?wid, ?wsid, "Window server ID no longer exists, marking as stale");
+                    trace!(
+                        ?wid,
+                        ?wsid,
+                        "Window server ID no longer exists, marking as stale"
+                    );
                     stale_windows.push(wid);
                 }
             }

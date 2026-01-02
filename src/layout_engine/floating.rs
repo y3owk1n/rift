@@ -245,10 +245,7 @@ mod tests {
         manager.add_floating(w(1, 2));
         manager.add_floating(w(1, 3));
 
-        manager.rebuild_active_for_workspace(
-            space,
-            vec![w(1, 1), w(1, 2), w(1, 4)],
-        );
+        manager.rebuild_active_for_workspace(space, vec![w(1, 1), w(1, 2), w(1, 4)]);
 
         let active = manager.active_flat(space);
         assert_eq!(active.len(), 2);
