@@ -212,6 +212,7 @@ impl CommandEventHandler {
     }
 
     pub fn handle_command_reactor_save_and_exit(reactor: &mut Reactor) {
+        reactor.restore_windows_on_exit();
         match reactor.layout_manager.layout_engine.save(config::restore_file()) {
             Ok(()) => std::process::exit(0),
             Err(e) => {
