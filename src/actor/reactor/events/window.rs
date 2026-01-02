@@ -88,6 +88,8 @@ impl WindowEventHandler {
         }
         let window_server_id =
             reactor.window_manager.windows.get(&wid).and_then(|w| w.window_server_id);
+        let destroyed_pid = wid.pid;
+
         if let Some(ws_id) = window_server_id {
             reactor.transaction_manager.remove_for_window(ws_id);
             reactor.window_manager.window_ids.remove(&ws_id);
@@ -96,8 +98,38 @@ impl WindowEventHandler {
         } else {
             debug!(?wid, "Received WindowDestroyed for unknown window - ignoring");
         }
+
+        let app_had_other_windows = reactor
+            .window_manager
+            .windows
+            .iter()
+            .any(|(&other_wid, _)| other_wid.pid == destroyed_pid && other_wid != wid);
+
         reactor.window_manager.windows.remove(&wid);
         reactor.send_layout_event(LayoutEvent::WindowRemoved(wid));
+
+        if !app_had_other_windows {
+            debug!(
+                ?wid,
+                pid = destroyed_pid,
+                "Last window of app closed, checking for replacement"
+            );
+            let Some(&active_space) = reactor.active_spaces.iter().next() else {
+                debug!(?wid, "No active space found for focus switch");
+                return true;
+            };
+
+            if let Some(replacement_wid) = reactor.last_focused_window_in_space(active_space) {
+                debug!(
+                    ?wid,
+                    ?replacement_wid,
+                    "Last window of app closed, focusing last focused window in space"
+                );
+                reactor.raise_window(replacement_wid, Quiet::No, None);
+            } else {
+                debug!(?wid, "No replacement window found in space");
+            }
+        }
 
         if let DragState::PendingSwap { session, target } = &reactor.drag_manager.drag_state {
             if session.window == wid || *target == wid {
