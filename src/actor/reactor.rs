@@ -36,7 +36,7 @@ pub use replay::{Record, replay};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_with::serde_as;
-use tracing::{debug, instrument, trace, warn};
+use tracing::{debug, instrument, trace, warn, Span};
 use transaction_manager::TransactionId;
 
 use super::event_tap;
@@ -661,17 +661,29 @@ impl Reactor {
             Duration::from_secs(self.refocus_manager.gc_interval_seconds),
             Duration::from_secs(self.refocus_manager.gc_interval_seconds),
         );
+        let mut pending_events: Vec<(Span, Event)> = Vec::new();
+        let mut coalesce_interval = tokio::time::interval(Duration::from_millis(5));
+        coalesce_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
         loop {
             tokio::select! {
                 biased;
                 message = events.recv() => {
                     match message {
                         Some((span, event)) => {
-                            let _guard = span.enter();
-                            self.handle_event(event);
+                            pending_events.push((span, event));
                         }
                         None => {
                             break;
+                        }
+                    }
+                }
+                _ = coalesce_interval.tick() => {
+                    if !pending_events.is_empty() {
+                        let events = std::mem::take(&mut pending_events);
+                        for (span, event) in events {
+                            let _guard = span.enter();
+                            self.handle_event(event);
                         }
                     }
                 }
