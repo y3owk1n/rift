@@ -6,7 +6,6 @@
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::num::NonZeroU32;
-use std::sync::LazyLock;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -846,10 +845,6 @@ impl State {
 
         check_cancel()?;
 
-        static MUTEX: LazyLock<parking_lot::Mutex<()>> =
-            LazyLock::new(|| parking_lot::Mutex::new(()));
-        let mut mutex_guard = Some(MUTEX.lock());
-        check_cancel()?;
         let mut this = this_ref.borrow_mut();
 
         let is_frontmost = trace("is_frontmost", &this.app, || this.app.frontmost())?;
@@ -915,7 +910,6 @@ impl State {
 
             let is_last = i + 1 == wids.len();
             let quiet_if = if is_last {
-                mutex_guard.take();
                 (quiet == Quiet::Yes).then_some(wid)
             } else {
                 None
