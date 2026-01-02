@@ -1,4 +1,4 @@
-use tracing::{trace, warn};
+use tracing::{debug, trace, warn};
 
 use crate::actor::app::{AppInfo, WindowId, WindowInfo, pid_t};
 use crate::actor::reactor::{Event, LayoutEvent, Reactor, WindowState, utils};
@@ -58,7 +58,9 @@ impl WindowDiscoveryHandler {
                 .filter_map(|wsid| reactor.window_manager.window_ids.get(wsid))
                 .any(|wid| wid.pid == pid && !known_visible_set.contains(wid))
         };
-        // TODO: Rewrite it
+
+        let has_visible_wsids = reactor.has_visible_window_server_ids_for_pid(pid);
+
         let skip_stale_cleanup = matches!(
             reactor.refocus_manager.stale_cleanup_state,
             crate::actor::reactor::StaleCleanupState::Suppressed
@@ -67,9 +69,11 @@ impl WindowDiscoveryHandler {
             || reactor.is_in_drag()
             || reactor.pid_has_changing_screens(pid)
             || reactor.get_active_drag_session().map_or(false, |s| s.window.pid == pid)
-            || (known_visible_set.is_empty()
-                && !reactor.has_visible_window_server_ids_for_pid(pid))
-            || has_window_server_visibles_without_ax;
+            || has_window_server_visibles_without_ax
+            // When known_visible is empty but there are visible window server IDs,
+            // we still need to check for windows that were destroyed via CGS notification
+            // but never appeared in known_visible (race condition)
+            || (known_visible_set.is_empty() && !has_visible_wsids && !has_window_server_visibles_without_ax);
 
         let active_space_windows: Option<HashSet<WindowServerId>> = if skip_stale_cleanup {
             None
@@ -193,6 +197,170 @@ impl WindowDiscoveryHandler {
         }
     }
 
+    /// Identify stale windows including minimized ones (used during periodic GC).
+    /// This is more aggressive than the normal stale detection because it also
+    /// checks minimized windows which can become stale without triggering normal events.
+    pub fn identify_stale_windows_for_gc(
+        reactor: &Reactor,
+    ) -> Vec<WindowId> {
+        const MIN_REAL_WINDOW_DIMENSION: f64 = 2.0;
+
+        if matches!(
+            reactor.refocus_manager.stale_cleanup_state,
+            crate::actor::reactor::StaleCleanupState::Suppressed
+        ) || reactor.is_mission_control_active() || reactor.is_in_drag()
+        {
+            return Vec::new();
+        }
+
+        let active_space_ids: Vec<u64> = reactor
+            .space_manager
+            .iter_known_spaces()
+            .map(|space| space.get())
+            .collect();
+
+        let active_space_windows: Option<HashSet<WindowServerId>> = if active_space_ids.is_empty() {
+            None
+        } else {
+            let window_ids = crate::sys::window_server::space_window_list_for_connection(
+                &active_space_ids,
+                0,
+                true,
+            );
+            let mut set = HashSet::default();
+            set.extend(window_ids.into_iter().map(WindowServerId::new));
+            Some(set)
+        };
+
+        reactor
+            .window_manager
+            .windows
+            .iter()
+            .filter_map(|(&wid, state)| {
+                if let Some(ws_id) = state.window_server_id {
+                    if let Some(active_windows) = active_space_windows.as_ref() {
+                        if !active_windows.contains(&ws_id) {
+                            trace!(
+                                ?wid,
+                                ws_id = ?ws_id,
+                                "GC: Skipping stale check; window is not on an active space"
+                            );
+                            return None;
+                        }
+                    }
+
+                    let server_info = reactor
+                        .window_server_info_manager
+                        .window_server_info
+                        .get(&ws_id)
+                        .cloned()
+                        .or_else(|| window_server::get_window(ws_id));
+
+                    let info = match server_info {
+                        Some(info) => info,
+                        None => {
+                            trace!(
+                                ?wid,
+                                ws_id = ?ws_id,
+                                "GC: Window server info not found, marking as stale"
+                            );
+                            return Some(wid);
+                        }
+                    };
+
+                    let width = info.frame.size.width.abs();
+                    let height = info.frame.size.height.abs();
+
+                    let unsuitable = !window_server::app_window_suitable(ws_id);
+                    let invalid_layer = info.layer != 0;
+                    let too_small = width < MIN_REAL_WINDOW_DIMENSION
+                        || height < MIN_REAL_WINDOW_DIMENSION;
+                    let ordered_in = window_server::window_is_ordered_in(ws_id);
+                    let visible_in_snapshot =
+                        reactor.window_manager.visible_windows.contains(&ws_id);
+
+                    let is_on_active_space = active_space_windows
+                        .as_ref()
+                        .map_or(false, |set| set.contains(&ws_id));
+
+                    if unsuitable
+                        || invalid_layer
+                        || too_small
+                        || (is_on_active_space && !ordered_in && !visible_in_snapshot)
+                    {
+                        Some(wid)
+                    } else {
+                        None
+                    }
+                } else {
+                    trace!(
+                        ?wid,
+                        "GC: Window without window server ID, marking as stale"
+                    );
+                    Some(wid)
+                }
+            })
+            .collect()
+    }
+
+    /// Aggressively verify windows exist by querying the window server directly.
+    /// This is more reliable than AX callbacks for detecting destroyed windows.
+    pub fn verify_windows_exist(reactor: &mut Reactor) -> Vec<WindowId> {
+        let mut stale_windows: Vec<WindowId> = Vec::new();
+
+        for (&wid, state) in &reactor.window_manager.windows {
+            if let Some(ws_id) = state.window_server_id {
+                if !window_server::window_exists(ws_id) {
+                    debug!(?wid, ?ws_id, "Window no longer exists in window server, marking as stale");
+                    stale_windows.push(wid);
+                }
+            }
+        }
+
+        stale_windows
+    }
+
+    /// Cross-check all known windows against what's actually visible on all spaces.
+    /// This catches windows that were destroyed without proper notifications.
+    pub fn cross_check_all_windows(reactor: &Reactor) -> Vec<WindowId> {
+        let active_space_ids: Vec<u64> = reactor
+            .space_manager
+            .iter_known_spaces()
+            .map(|space| space.get())
+            .collect();
+
+        if active_space_ids.is_empty() {
+            return Vec::new();
+        }
+
+        let cgs_visible_windows: HashSet<WindowServerId> = {
+            let window_ids = window_server::space_window_list_for_connection(
+                &active_space_ids,
+                0,
+                true,
+            );
+            window_ids.into_iter().map(WindowServerId::new).collect()
+        };
+
+        reactor
+            .window_manager
+            .windows
+            .iter()
+            .filter_map(|(&wid, state)| {
+                let ws_id = state.window_server_id?;
+                if !cgs_visible_windows.contains(&ws_id) {
+                    if let Some(info) = window_server::get_window(ws_id) {
+                        if info.layer != 0 {
+                            return None;
+                        }
+                    }
+                    return Some(wid);
+                }
+                None
+            })
+            .collect()
+    }
+
     /// Process new and updated windows, returning lists of new and updated windows.
     fn process_window_list(
         reactor: &mut Reactor,
@@ -241,6 +409,7 @@ impl WindowDiscoveryHandler {
                         existing.ax_role = info.ax_role.clone();
                         existing.ax_subrole = info.ax_subrole.clone();
                         existing.is_manageable = manageable;
+                        existing.last_verified = Some(std::time::Instant::now());
                     }
                 } else {
                     let mut state: WindowState = WindowState {
@@ -256,6 +425,7 @@ impl WindowDiscoveryHandler {
                         bundle_path: info.path.clone(),
                         ax_role: info.ax_role.clone(),
                         ax_subrole: info.ax_subrole.clone(),
+                        last_verified: Some(std::time::Instant::now()),
                     };
                     let manageable = utils::compute_window_manageability(
                         state.window_server_id,

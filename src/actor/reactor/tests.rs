@@ -560,6 +560,7 @@ fn it_respects_wsid_suppression_for_apply_app_rules() {
         bundle_path: info.path.clone(),
         ax_role: info.ax_role.clone(),
         ax_subrole: info.ax_subrole.clone(),
+        last_verified: Some(std::time::Instant::now()),
     });
     reactor.window_manager.window_ids.insert(wsid, wid);
 

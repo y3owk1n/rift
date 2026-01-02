@@ -77,6 +77,7 @@ impl SpaceEventHandler {
             }
             return;
         }
+        debug!(?wsid, "Received WindowServerDestroyed for unknown space - ignoring");
     }
 
     pub fn handle_window_server_appeared(
