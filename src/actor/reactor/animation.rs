@@ -261,7 +261,8 @@ impl AnimationManager {
         layout: &[(WindowId, CGRect)],
         skip_wid: Option<WindowId>,
     ) -> bool {
-        let mut per_app: HashMap<pid_t, Vec<(WindowId, CGRect)>> = HashMap::default();
+        let mut per_app: HashMap<pid_t, Vec<(WindowId, CGRect)>> =
+            HashMap::with_capacity_and_hasher(layout.len().min(8), Default::default());
         let mut any_frame_changed = false;
 
         for &(wid, target_frame) in layout {
@@ -306,7 +307,8 @@ impl AnimationManager {
             let (first_wid, first_target) = frames[0];
             let mut txid = TransactionId::default();
             let mut has_txid = false;
-            let mut txid_entries: Vec<(WindowServerId, TransactionId, CGRect)> = Vec::new();
+            let mut txid_entries: Vec<(WindowServerId, TransactionId, CGRect)> =
+                Vec::with_capacity(frames.len());
             if let Some(window) = reactor.window_manager.windows.get_mut(&first_wid) {
                 if let Some(wsid) = window.window_server_id {
                     txid = reactor.transaction_manager.generate_next_txid(wsid);
@@ -327,8 +329,7 @@ impl AnimationManager {
                 reactor.transaction_manager.update_txid_entries(txid_entries);
             }
 
-            let frames_to_send = frames.clone();
-            if let Err(e) = handle.send(Request::SetBatchWindowFrame(frames_to_send, txid)) {
+            if let Err(e) = handle.send(Request::SetBatchWindowFrame(frames.clone(), txid)) {
                 debug!(
                     ?pid,
                     ?e,
