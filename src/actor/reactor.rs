@@ -431,6 +431,9 @@ struct WindowState {
     /// Timestamp when this window was last verified to exist
     /// Used to detect stale windows that haven't been confirmed recently
     last_verified: Option<std::time::Instant>,
+    /// Set to true when animation begins, cleared when animation ends
+    /// Used to suppress WindowFrameChanged events during animation
+    is_animating: bool,
 }
 
 impl From<WindowInfo> for WindowState {
@@ -449,6 +452,7 @@ impl From<WindowInfo> for WindowState {
             ax_role: info.ax_role,
             ax_subrole: info.ax_subrole,
             last_verified: Some(std::time::Instant::now()),
+            is_animating: false,
         }
     }
 }

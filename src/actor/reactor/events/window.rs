@@ -224,6 +224,10 @@ impl WindowEventHandler {
             {
                 return false;
             }
+            if window.is_animating {
+                trace!(?wid, "Ignoring frame change during animation");
+                return false;
+            }
             let pending_target = window.window_server_id.and_then(|wsid| {
                 reactor.transaction_manager.get_target_frame(wsid).map(|target| (wsid, target))
             });

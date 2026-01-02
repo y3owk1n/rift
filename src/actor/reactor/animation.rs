@@ -162,6 +162,7 @@ impl AnimationManager {
         );
         let mut animated_count = 0;
         let mut animated_wids_wsids: Vec<u32> = Vec::new();
+        let mut animating_windows: Vec<WindowId> = Vec::new();
         let mut any_frame_changed = false;
 
         for &(wid, target_frame) in layout {
@@ -233,6 +234,8 @@ impl AnimationManager {
 
             if let Some(window) = reactor.window_manager.windows.get_mut(&wid) {
                 window.frame_monotonic = target_frame;
+                window.is_animating = true;
+                animating_windows.push(wid);
             }
         }
 
@@ -242,6 +245,11 @@ impl AnimationManager {
                 anim.skip_to_end();
             } else {
                 anim.run();
+            }
+            for wid in animating_windows {
+                if let Some(window) = reactor.window_manager.windows.get_mut(&wid) {
+                    window.is_animating = false;
+                }
             }
         }
 

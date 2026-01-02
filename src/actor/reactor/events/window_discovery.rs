@@ -426,6 +426,7 @@ impl WindowDiscoveryHandler {
                         ax_role: info.ax_role.clone(),
                         ax_subrole: info.ax_subrole.clone(),
                         last_verified: Some(std::time::Instant::now()),
+                        is_animating: false,
                     };
                     let manageable = utils::compute_window_manageability(
                         state.window_server_id,
