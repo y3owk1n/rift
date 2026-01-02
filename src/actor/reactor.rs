@@ -2762,4 +2762,73 @@ impl Reactor {
     ) -> Result<bool, error::ReactorError> {
         LayoutManager::update_layout(self, is_resize, is_workspace_switch)
     }
+
+    pub fn restore_windows_on_exit(&mut self) {
+        debug!("Restoring all windows to visible positions on exit");
+        let spaces: Vec<SpaceId> = self.space_manager.iter_known_spaces().collect();
+        for space in spaces {
+            self.restore_windows_for_space(space);
+        }
+    }
+
+    fn restore_windows_for_space(&mut self, space: SpaceId) {
+        let Some(screen) = self.space_manager.screen_by_space(space) else {
+            trace!(?space, "No screen found for space, skipping restoration");
+            return;
+        };
+
+        let screen_frame = screen.frame;
+        let gaps = self.config_manager.config.settings.layout.gaps.clone();
+        let stack_offset = self.config_manager.config.settings.layout.stack.stack_offset;
+
+        let horizontal = self.config_manager.config.settings.ui.stack_line.horiz_placement;
+        let vertical = self.config_manager.config.settings.ui.stack_line.vert_placement;
+
+        let workspaces = self
+            .layout_manager
+            .layout_engine
+            .virtual_workspace_manager_mut()
+            .list_workspaces(space);
+
+        for (workspace_id, _name) in workspaces {
+            let positions = self.layout_manager.layout_engine.calculate_layout_for_workspace(
+                space,
+                workspace_id,
+                screen_frame,
+                &gaps,
+                stack_offset,
+                horizontal,
+                vertical,
+            );
+
+            for (wid, target_frame) in positions {
+                self.move_window_to_frame(wid, target_frame);
+            }
+        }
+    }
+
+    fn move_window_to_frame(&mut self, wid: WindowId, frame: CGRect) {
+        let Some(window_state) = self.window_manager.windows.get(&wid) else {
+            trace!(?wid, "Window not found in state, skipping restoration");
+            return;
+        };
+
+        let Some(app) = self.app_manager.apps.get(&wid.pid) else {
+            trace!(?wid, "App not found, skipping restoration");
+            return;
+        };
+
+        let txid = window_state
+            .window_server_id
+            .map(|wsid| self.transaction_manager.generate_next_txid(wsid))
+            .unwrap_or_default();
+
+        if let Err(e) = app.handle.send(Request::SetWindowFrame(wid, frame, txid, true)) {
+            warn!(?wid, "Failed to restore window position: {}", e);
+        }
+
+        if let Some(state) = self.window_manager.windows.get_mut(&wid) {
+            state.frame_monotonic = frame;
+        }
+    }
 }
