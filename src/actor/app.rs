@@ -723,8 +723,24 @@ impl State {
             kAXMenuOpenedNotification => self.send_event(Event::MenuOpened),
             kAXMenuClosedNotification => self.send_event(Event::MenuClosed),
             kAXUIElementDestroyedNotification => {
-                let Ok(wid) = self.id(&elem) else {
-                    return;
+                let wid = match self.id(&elem) {
+                    Ok(wid) => wid,
+                    Err(_) => {
+                        trace!(
+                            pid = self.pid,
+                            "Failed to identify window from AX destroy notification, trying fallback"
+                        );
+                        match self.find_destroyed_window_by_ax_enumeration() {
+                            Some(wid) => wid,
+                            None => {
+                                trace!(
+                                    pid = self.pid,
+                                    "Could not identify destroyed window, will be cleaned up by CGS event"
+                                );
+                                return;
+                            }
+                        }
+                    }
                 };
                 self.windows.remove(&wid);
                 self.needs_resync.remove(&wid);
@@ -1240,6 +1256,29 @@ impl State {
             return Ok(wid);
         }
         Err(AxError::NotFound)
+    }
+
+    fn find_destroyed_window_by_ax_enumeration(&self) -> Option<WindowId> {
+        let Ok(current_windows) = self.app.windows() else {
+            trace!(pid = self.pid, "Failed to enumerate app's AX windows");
+            return None;
+        };
+
+        let mut current_wsids: std::collections::HashSet<WindowServerId> =
+            std::collections::HashSet::new();
+        for window_elem in &current_windows {
+            if let Ok(wsid) = WindowServerId::try_from(window_elem) {
+                current_wsids.insert(wsid);
+            }
+        }
+
+        self.windows
+            .iter()
+            .find(|(_, w)| {
+                w.window_server_id
+                    .map_or(false, |wsid| !current_wsids.contains(&wsid))
+            })
+            .map(|(&wid, _)| wid)
     }
 
     fn stop_notifications_for_animation(&self, elem: &AXUIElement) {
