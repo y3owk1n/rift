@@ -477,6 +477,19 @@ impl WindowDiscoveryHandler {
                     if reactor.is_space_active(space) {
                         reactor.send_layout_event(LayoutEvent::WindowFocused(space, main_window));
                     }
+
+                    if let Some(ws_id) = reactor
+                        .layout_manager
+                        .layout_engine
+                        .virtual_workspace_manager()
+                        .workspace_for_window(space, main_window)
+                    {
+                        reactor
+                            .layout_manager
+                            .layout_engine
+                            .virtual_workspace_manager_mut()
+                            .set_active_workspace(space, ws_id);
+                    }
                 }
             }
         }
