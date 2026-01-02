@@ -329,6 +329,10 @@ pub fn get_window(id: WindowServerId) -> Option<WindowServerInfo> {
     (ws.len() == 1).then(|| ws.remove(0))
 }
 
+pub fn window_exists(id: WindowServerId) -> bool {
+    get_window(id).is_some()
+}
+
 fn get_num(dict: &CFDictionary<CFString, CFType>, key: &'static CFString) -> Option<i64> {
     dict.get(key)?.downcast::<CFNumber>().ok()?.as_i64()
 }
