@@ -103,10 +103,10 @@ impl StackLine {
         }
     }
 
-    fn handle_groups_updated(&mut self, _space_id: SpaceId, groups: Vec<GroupInfo>) {
+    fn handle_groups_updated(&mut self, space_id: SpaceId, groups: Vec<GroupInfo>) {
         let sigs: Vec<GroupSig> = groups.iter().map(GroupSig::from_group_info).collect();
 
-        match self.group_sigs_by_space.entry(_space_id) {
+        match self.group_sigs_by_space.entry(space_id) {
             Entry::Occupied(mut prev) => {
                 if prev.get() == &sigs {
                     return;
@@ -121,8 +121,10 @@ impl StackLine {
         let group_nodes: std::collections::HashSet<NodeId> =
             groups.iter().map(|g| g.node_id).collect();
         self.indicators.retain(|&node_id, indicator| {
-            // TODO: Also check if they r on the same space when we track that
-            if group_nodes.contains(&node_id) {
+            let indicator_space_id = indicator.space_id();
+            let is_same_space = indicator_space_id == Some(space_id);
+            let is_in_current_groups = group_nodes.contains(&node_id);
+            if is_same_space && is_in_current_groups {
                 true
             } else {
                 if let Err(err) = indicator.clear() {
@@ -216,12 +218,14 @@ impl StackLine {
             if let Err(err) = indicator.set_frame(indicator_frame) {
                 tracing::warn!(?err, "failed to set stack line indicator frame");
             }
+            indicator.set_space_id(group.space_id);
             if let Err(err) = indicator.update(config, group_data.clone()) {
                 tracing::warn!(?err, "failed to update stack line indicator");
             }
         } else {
             match GroupIndicatorWindow::new(indicator_frame, config) {
                 Ok(indicator) => {
+                    indicator.set_space_id(group.space_id);
                     let indicator =
                         self.attach_indicator(node_id, indicator, config, group_data.clone());
                     self.indicators.insert(node_id, indicator);
