@@ -184,10 +184,6 @@ pub enum Event {
     #[serde(skip)]
     MissionControlNativeExited,
 
-    /// Periodic garbage collection event to detect stale windows
-    #[serde(skip)]
-    GarbageCollect,
-
     /// A raise request completed. Used by the raise manager to track when
     /// all raise requests in a sequence have finished.
     RaiseCompleted {
@@ -297,7 +293,6 @@ pub enum ReactorCommand {
         selector: DisplaySelector,
         window_id: Option<u32>,
     },
-    GarbageCollect,
 }
 
 #[derive(Default, Debug, Clone)]
@@ -566,7 +561,6 @@ impl Reactor {
             refocus_manager: managers::RefocusManager {
                 stale_cleanup_state: StaleCleanupState::Enabled,
                 refocus_state: RefocusState::None,
-                last_gc_time: None,
             },
             pending_space_change_manager: managers::PendingSpaceChangeManager {
                 pending_space_change: None,
@@ -838,9 +832,6 @@ impl Reactor {
             Event::MissionControlNativeExited => {
                 SpaceEventHandler::handle_mission_control_native_exited(self);
             }
-            Event::GarbageCollect => {
-                self.handle_garbage_collect();
-            }
             Event::RaiseCompleted { window_id, sequence_id } => {
                 SystemEventHandler::handle_raise_completed(self, window_id, sequence_id);
             }
@@ -903,9 +894,6 @@ impl Reactor {
             }
             Event::Command(Command::Reactor(ReactorCommand::CloseWindow { window_server_id })) => {
                 CommandEventHandler::handle_command_reactor_close_window(self, window_server_id)
-            }
-            Event::Command(Command::Reactor(ReactorCommand::GarbageCollect)) => {
-                self.handle_garbage_collect();
             }
             _ => (),
         }
@@ -2478,45 +2466,6 @@ impl Reactor {
         }
     }
 
-    fn handle_garbage_collect(&mut self) {
-        let now = std::time::Instant::now();
-        self.refocus_manager.last_gc_time = Some(now);
-
-        let all_pids: Vec<pid_t> = self.app_manager.apps.keys().copied().collect();
-        for pid in all_pids {
-            if !self.app_manager.apps.contains_key(&pid) {
-                continue;
-            }
-            if let Some(app) = self.app_manager.apps.get(&pid) {
-                if app.handle.send(Request::GetVisibleWindows { force_refresh: true }).is_err() {
-                    warn!(pid, "Failed to send GetVisibleWindows during GC - app may have terminated");
-                }
-            }
-        }
-
-        Self::cleanup_windows_on_inactive_spaces(self);
-
-        let stale_windows = events::window_discovery::WindowDiscoveryHandler::identify_stale_windows_for_gc(self);
-        for wid in stale_windows {
-            debug!(?wid, "Removing stale window during GC (including minimized)");
-            self.handle_event(Event::WindowDestroyed(wid));
-        }
-
-        let verified_stale = events::window_discovery::WindowDiscoveryHandler::verify_windows_exist(self);
-        for wid in verified_stale {
-            debug!(?wid, "Removing stale window during GC (window server verification)");
-            self.handle_event(Event::WindowDestroyed(wid));
-        }
-
-        let cross_check_stale = events::window_discovery::WindowDiscoveryHandler::cross_check_all_windows(self);
-        for wid in cross_check_stale {
-            debug!(?wid, "Removing stale window during GC (cross-check verification)");
-            self.handle_event(Event::WindowDestroyed(wid));
-        }
-
-        debug!("Garbage collection completed");
-    }
-
     fn cleanup_windows_on_inactive_spaces(reactor: &mut Reactor) {
         let active_space_ids: HashSet<SpaceId> = reactor
             .space_manager
@@ -2550,7 +2499,7 @@ impl Reactor {
         }
 
         for wid in stale_windows {
-            debug!(?wid, "Removing stale window during GC");
+            debug!(?wid, "Removing stale window");
             reactor.handle_event(Event::WindowDestroyed(wid));
         }
     }

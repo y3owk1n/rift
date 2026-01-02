@@ -172,7 +172,6 @@ impl WorkspaceSwitchManager {
 pub struct RefocusManager {
     pub stale_cleanup_state: super::StaleCleanupState,
     pub refocus_state: super::RefocusState,
-    pub last_gc_time: Option<std::time::Instant>,
 }
 
 impl Default for RefocusManager {
@@ -180,7 +179,6 @@ impl Default for RefocusManager {
         Self {
             stale_cleanup_state: super::StaleCleanupState::Enabled,
             refocus_state: super::RefocusState::None,
-            last_gc_time: None,
         }
     }
 }

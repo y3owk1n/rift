@@ -114,8 +114,6 @@ enum ExecuteCommands {
     SaveAndExit,
     /// Show timing metrics
     ShowTiming,
-    /// Trigger garbage collection to clean up stale windows
-    GarbageCollect,
 }
 
 #[derive(Subcommand)]
@@ -458,9 +456,6 @@ fn build_execute_request(execute: ExecuteCommands) -> Result<RiftRequest, String
         }
         ExecuteCommands::ShowTiming => RiftCommand::Reactor(reactor::Command::Metrics(
             rift_wm::common::log::MetricsCommand::ShowTiming,
-        )),
-        ExecuteCommands::GarbageCollect => RiftCommand::Reactor(reactor::Command::Reactor(
-            reactor::ReactorCommand::GarbageCollect,
         )),
     };
 
