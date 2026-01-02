@@ -1,4 +1,5 @@
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use slotmap::{SlotMap, new_key_type};
@@ -51,6 +52,13 @@ pub struct AppRuleAssignment {
 pub enum AppRuleResult {
     Managed(AppRuleAssignment),
     Unmanaged,
+}
+
+#[derive(Debug, Clone)]
+struct CachedAppRule {
+    rule: AppWorkspaceRule,
+    compiled_title_regex: Option<Regex>,
+    compiled_substring_regex: Option<Regex>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,6 +127,10 @@ pub struct VirtualWorkspaceManager {
     #[serde(skip)]
     app_rules: Vec<AppWorkspaceRule>,
     #[serde(skip)]
+    cached_app_rules: Vec<CachedAppRule>,
+    #[serde(skip)]
+    app_rules_by_bundle_id: HashMap<String, usize>,
+    #[serde(skip)]
     max_workspaces: usize,
     #[serde(skip)]
     default_workspace_count: usize,
@@ -148,7 +160,7 @@ impl VirtualWorkspaceManager {
         let target_count = config.default_workspace_count.max(1).min(max_workspaces);
         let default_workspace = config.default_workspace.min(target_count - 1);
 
-        Self {
+        let mut manager = Self {
             workspaces: SlotMap::default(),
             workspaces_by_space: HashMap::default(),
             active_workspace_per_space: HashMap::default(),
@@ -158,12 +170,16 @@ impl VirtualWorkspaceManager {
             floating_positions: HashMap::default(),
             workspace_counter: 1,
             app_rules: config.app_rules.clone(),
+            cached_app_rules: Vec::new(),
+            app_rules_by_bundle_id: HashMap::default(),
             max_workspaces,
             default_workspace_count: config.default_workspace_count,
             default_workspace_names: config.workspace_names.clone(),
             default_workspace,
             workspace_auto_back_and_forth: config.workspace_auto_back_and_forth,
-        }
+        };
+        manager.rebuild_app_rule_cache();
+        manager
     }
 
     pub fn update_settings(&mut self, config: &VirtualWorkspaceSettings) {
@@ -171,6 +187,7 @@ impl VirtualWorkspaceManager {
         self.default_workspace_count = config.default_workspace_count;
         self.default_workspace_names = config.workspace_names.clone();
         self.workspace_auto_back_and_forth = config.workspace_auto_back_and_forth;
+        self.rebuild_app_rule_cache();
 
         let target_count = self.default_workspace_count.max(1).min(self.max_workspaces);
         self.default_workspace = config.default_workspace.min(target_count - 1);
@@ -188,6 +205,45 @@ impl VirtualWorkspaceManager {
                 let ws = VirtualWorkspace::new(name, *space);
                 let id = self.workspaces.insert(ws);
                 ids.push(id);
+            }
+        }
+    }
+
+    fn rebuild_app_rule_cache(&mut self) {
+        self.cached_app_rules.clear();
+        self.app_rules_by_bundle_id.clear();
+
+        for (idx, rule) in self.app_rules.iter().enumerate() {
+            let compiled_title_regex = rule.title_regex.as_ref().and_then(|re| {
+                regex::RegexBuilder::new(re)
+                    .case_insensitive(true)
+                    .build()
+                    .map_err(|e| warn!("Invalid title_regex '{}' in app rule: {}", re, e))
+                    .ok()
+            });
+
+            let compiled_substring_regex = rule.title_substring.as_ref().and_then(|sub| {
+                let escaped = regex::escape(sub);
+                let pattern = format!("(?i).*{}.*", escaped);
+                regex::RegexBuilder::new(&pattern)
+                    .build()
+                    .map_err(|e| warn!("Invalid title_substring '{}' in app rule: {}", sub, e))
+                    .ok()
+            });
+
+            self.cached_app_rules.push(CachedAppRule {
+                rule: rule.clone(),
+                compiled_title_regex,
+                compiled_substring_regex,
+            });
+
+            if let Some(ref bundle_id) = rule.app_id {
+                if !bundle_id.is_empty() {
+                    self.app_rules_by_bundle_id.insert(
+                        bundle_id.to_lowercase(),
+                        idx,
+                    );
+                }
             }
         }
     }
@@ -1043,7 +1099,9 @@ impl VirtualWorkspaceManager {
     ) -> Option<&AppWorkspaceRule> {
         let mut matches: Vec<(usize, &AppWorkspaceRule, usize)> = Vec::new();
 
-        for (idx, rule) in self.app_rules.iter().enumerate() {
+        for (idx, cached_rule) in self.cached_app_rules.iter().enumerate() {
+            let rule = &cached_rule.rule;
+
             if let Some(ref rule_app_id) = rule.app_id {
                 match app_bundle_id {
                     Some(bundle_id) if rule_app_id.eq_ignore_ascii_case(bundle_id) => {}
@@ -1064,38 +1122,21 @@ impl VirtualWorkspaceManager {
                 }
             }
 
-            if let Some(ref rule_re) = rule.title_regex {
-                if rule_re.is_empty() {
-                    continue;
-                }
+            if let Some(ref compiled_re) = cached_rule.compiled_title_regex {
                 match window_title {
                     Some(title) => {
-                        match regex::RegexBuilder::new(rule_re).case_insensitive(true).build() {
-                            Ok(re) => {
-                                if !re.is_match(title) {
-                                    continue;
-                                }
-                            }
-                            Err(e) => {
-                                warn!("Invalid title_regex '{}' in app rule: {}", rule_re, e);
-                                continue;
-                            }
+                        if !compiled_re.is_match(title) {
+                            continue;
                         }
                     }
                     None => continue,
                 }
             }
 
-            // Case-insensitive substring matching for title_substring
-            if let Some(ref title_sub) = rule.title_substring {
-                if title_sub.is_empty() {
-                    continue;
-                }
+            if let Some(ref compiled_re) = cached_rule.compiled_substring_regex {
                 match window_title {
                     Some(title) => {
-                        let title_l = title.to_lowercase();
-                        let sub_l = title_sub.to_lowercase();
-                        if !title_l.contains(&sub_l) {
+                        if !compiled_re.is_match(title) {
                             continue;
                         }
                     }
