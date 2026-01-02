@@ -662,8 +662,7 @@ impl Reactor {
             Duration::from_secs(self.refocus_manager.gc_interval_seconds),
         );
         let mut pending_events: Vec<(Span, Event)> = Vec::new();
-        let mut coalesce_interval = tokio::time::interval(Duration::from_millis(5));
-        coalesce_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        let mut coalesce_timer = Timer::repeating(Duration::ZERO, Duration::from_millis(5));
 
         loop {
             tokio::select! {
@@ -678,7 +677,7 @@ impl Reactor {
                         }
                     }
                 }
-                _ = coalesce_interval.tick() => {
+                _ = coalesce_timer.next() => {
                     if !pending_events.is_empty() {
                         let events = std::mem::take(&mut pending_events);
                         for (span, event) in events {
