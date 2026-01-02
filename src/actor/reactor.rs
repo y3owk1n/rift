@@ -1125,6 +1125,43 @@ impl Reactor {
         };
         self.expose_all_spaces();
         self.space_manager.changing_screens.clear();
+
+        let target_workspace_for_main_window = if let Some(main_window) = self.main_window() {
+            if let Some(space) = self.best_space_for_window_id(main_window) {
+                let window_info = self.window_manager.windows.get(&main_window);
+                let app_info = self
+                    .app_manager
+                    .apps
+                    .get(&main_window.pid)
+                    .map(|app_state| app_state.info.clone());
+
+                self.layout_manager
+                    .layout_engine
+                    .virtual_workspace_manager_mut()
+                    .target_workspace_for_app_info(
+                        space,
+                        app_info.as_ref().and_then(|a| a.bundle_id.as_deref()),
+                        app_info
+                            .as_ref()
+                            .and_then(|a| a.localized_name.as_deref()),
+                        window_info.map(|w| w.title.as_str()),
+                        window_info.and_then(|w| w.ax_role.as_deref()),
+                        window_info.and_then(|w| w.ax_subrole.as_deref()),
+                    )
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(space) = spaces.iter().copied().flatten().next() {
+            self.layout_manager
+                .layout_engine
+                .virtual_workspace_manager_mut()
+                .ensure_space_initialized(space, target_workspace_for_main_window);
+        }
+
         if let Some(main_window) = self.main_window() {
             if let Some(space) = self.main_window_space() {
                 self.send_layout_event(LayoutEvent::WindowFocused(space, main_window));
