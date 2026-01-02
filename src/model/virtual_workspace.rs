@@ -79,12 +79,16 @@ impl VirtualWorkspace {
         }
     }
 
+    #[inline]
     pub fn contains_window(&self, window_id: WindowId) -> bool { self.windows.contains(&window_id) }
 
+    #[inline]
     pub fn windows(&self) -> impl Iterator<Item = WindowId> + '_ { self.windows.iter().copied() }
 
+    #[inline]
     pub fn add_window(&mut self, window_id: WindowId) { self.windows.insert(window_id); }
 
+    #[inline]
     pub fn remove_window(&mut self, window_id: WindowId) -> bool {
         if self.last_focused == Some(window_id) {
             self.last_focused = None;
@@ -92,12 +96,15 @@ impl VirtualWorkspace {
         self.windows.remove(&window_id)
     }
 
+    #[inline]
     pub fn set_last_focused(&mut self, window_id: Option<WindowId>) {
         self.last_focused = window_id;
     }
 
+    #[inline]
     pub fn last_focused(&self) -> Option<WindowId> { self.last_focused }
 
+    #[inline]
     pub fn window_count(&self) -> usize { self.windows.len() }
 }
 

@@ -455,6 +455,7 @@ impl From<WindowInfo> for WindowState {
 }
 
 impl WindowState {
+    #[inline]
     fn is_effectively_manageable(&self) -> bool { self.is_manageable && !self.ignore_app_rule }
 }
 
