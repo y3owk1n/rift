@@ -709,6 +709,7 @@ impl LayoutEngine {
 
                 let total_tiled_count: usize = tiled_by_workspace.values().map(|v| v.len()).sum();
 
+                let mut any_changed = false;
                 for (ws_id, layout) in self.workspace_layouts.active_layouts_for_space(space) {
                     let mut desired = tiled_by_workspace.get(&ws_id).cloned().unwrap_or_default();
                     for wid in self.virtual_workspace_manager.workspace_windows(space, ws_id) {
@@ -727,12 +728,27 @@ impl LayoutEngine {
                         }
                     }
 
-                    self.tree.set_windows_for_app(layout, pid, desired);
+                    let current: Vec<WindowId> = self
+                        .tree
+                        .visible_windows_in_layout(layout)
+                        .into_iter()
+                        .filter(|wid| wid.pid == pid)
+                        .collect();
+                    let mut current_sorted = current.clone();
+                    current_sorted.sort_unstable();
+                    let mut desired_sorted = desired.clone();
+                    desired_sorted.sort_unstable();
+
+                    if current_sorted != desired_sorted {
+                        any_changed = true;
+                        self.tree.set_windows_for_app(layout, pid, desired);
+                    }
                 }
 
-                self.broadcast_windows_changed(space);
-
-                self.rebalance_all_layouts();
+                if any_changed {
+                    self.broadcast_windows_changed(space);
+                    self.rebalance_all_layouts();
+                }
             }
             LayoutEvent::AppClosed(pid) => {
                 self.tree.remove_windows_for_app(pid);

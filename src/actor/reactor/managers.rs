@@ -173,7 +173,6 @@ pub struct RefocusManager {
     pub stale_cleanup_state: super::StaleCleanupState,
     pub refocus_state: super::RefocusState,
     pub last_gc_time: Option<std::time::Instant>,
-    pub gc_interval_seconds: u64,
 }
 
 impl Default for RefocusManager {
@@ -182,7 +181,6 @@ impl Default for RefocusManager {
             stale_cleanup_state: super::StaleCleanupState::Enabled,
             refocus_state: super::RefocusState::None,
             last_gc_time: None,
-            gc_interval_seconds: 30,
         }
     }
 }

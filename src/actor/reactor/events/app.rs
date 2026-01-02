@@ -1,4 +1,4 @@
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 
 use crate::actor::app::{AppInfo, AppThreadHandle, Quiet, WindowId};
 use crate::actor::reactor::{AppState, Event, Reactor};
@@ -119,6 +119,19 @@ impl AppEventHandler {
             );
             return;
         }
+
+        let now = std::time::Instant::now();
+        if let Some(last_time) = reactor.last_activation_time {
+            let cooldown = std::time::Duration::from_millis(50);
+            if now.duration_since(last_time) < cooldown {
+                trace!(
+                    pid,
+                    "Skipping duplicate application activation within cooldown period"
+                );
+                return;
+            }
+        }
+        reactor.last_activation_time = Some(now);
 
         reactor.handle_app_activation_workspace_switch(pid);
     }

@@ -382,6 +382,8 @@ pub struct Reactor {
     mission_control_manager: managers::MissionControlManager,
     refocus_manager: managers::RefocusManager,
     pending_space_change_manager: managers::PendingSpaceChangeManager,
+    layout_update_in_flight: bool,
+    last_activation_time: Option<std::time::Instant>,
     active_spaces: HashSet<SpaceId>,
 }
 
@@ -565,12 +567,13 @@ impl Reactor {
                 stale_cleanup_state: StaleCleanupState::Enabled,
                 refocus_state: RefocusState::None,
                 last_gc_time: None,
-                gc_interval_seconds: 30,
             },
             pending_space_change_manager: managers::PendingSpaceChangeManager {
                 pending_space_change: None,
                 topology_relayout_pending: false,
             },
+            layout_update_in_flight: false,
+            last_activation_time: None,
             active_spaces: HashSet::default(),
         }
     }
@@ -657,10 +660,6 @@ impl Reactor {
     }
 
     async fn run_reactor_loop(mut self, mut events: Receiver) {
-        let mut gc_timer = Timer::repeating(
-            Duration::from_secs(self.refocus_manager.gc_interval_seconds),
-            Duration::from_secs(self.refocus_manager.gc_interval_seconds),
-        );
         let mut pending_events: Vec<(Span, Event)> = Vec::new();
         let mut coalesce_timer = Timer::repeating(Duration::ZERO, Duration::from_millis(5));
 
@@ -685,9 +684,6 @@ impl Reactor {
                             self.handle_event(event);
                         }
                     }
-                }
-                _ = gc_timer.next() => {
-                    self.handle_garbage_collect();
                 }
             }
         }
@@ -2777,7 +2773,14 @@ impl Reactor {
         is_resize: bool,
         is_workspace_switch: bool,
     ) -> Result<bool, error::ReactorError> {
-        LayoutManager::update_layout(self, is_resize, is_workspace_switch)
+        if self.layout_update_in_flight {
+            trace!("Skipping redundant layout update");
+            return Ok(false);
+        }
+        self.layout_update_in_flight = true;
+        let result = LayoutManager::update_layout(self, is_resize, is_workspace_switch);
+        self.layout_update_in_flight = false;
+        result
     }
 
     pub fn restore_windows_on_exit(&mut self) {
