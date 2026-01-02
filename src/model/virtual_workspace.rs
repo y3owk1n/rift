@@ -192,7 +192,7 @@ impl VirtualWorkspaceManager {
         }
     }
 
-    fn ensure_space_initialized(&mut self, space: SpaceId) {
+    pub(crate) fn ensure_space_initialized(&mut self, space: SpaceId, target_workspace_id: Option<VirtualWorkspaceId>) {
         if self.workspaces_by_space.contains_key(&space) {
             return;
         }
@@ -211,9 +211,13 @@ impl VirtualWorkspaceManager {
         }
         self.workspaces_by_space.insert(space, ids.clone());
 
-        let default_idx = self.default_workspace.min(ids.len() - 1);
-        if let Some(&default_id) = ids.get(default_idx) {
-            self.active_workspace_per_space.insert(space, (None, default_id));
+        let active_id = target_workspace_id.or_else(|| {
+            let default_idx = self.default_workspace.min(ids.len() - 1);
+            ids.get(default_idx).copied()
+        });
+
+        if let Some(active_id) = active_id {
+            self.active_workspace_per_space.insert(space, (None, active_id));
         }
     }
 
@@ -297,7 +301,7 @@ impl VirtualWorkspaceManager {
         space: SpaceId,
         name: Option<String>,
     ) -> Result<VirtualWorkspaceId, WorkspaceError> {
-        self.ensure_space_initialized(space);
+        self.ensure_space_initialized(space, None);
         let count = self.workspaces_by_space.get(&space).map(|v| v.len()).unwrap_or(0);
         if count >= self.max_workspaces {
             return Err(WorkspaceError::InconsistentState(format!(
@@ -807,7 +811,7 @@ impl VirtualWorkspaceManager {
     }
 
     pub fn list_workspaces(&mut self, space: SpaceId) -> Vec<(VirtualWorkspaceId, String)> {
-        self.ensure_space_initialized(space);
+        self.ensure_space_initialized(space, None);
         let ids = self.workspaces_by_space.get(&space).cloned().unwrap_or_default();
         let workspaces: Vec<_> = ids
             .into_iter()
@@ -877,7 +881,7 @@ impl VirtualWorkspaceManager {
         let prev_rule_decision =
             self.last_rule_decision.get(&(space, window_id)).copied().unwrap_or(false);
 
-        self.ensure_space_initialized(space);
+        self.ensure_space_initialized(space, None);
         if self.workspaces_by_space.get(&space).map(|v| v.is_empty()).unwrap_or(true) {
             return Err(WorkspaceError::NoWorkspacesAvailable);
         }
@@ -1002,7 +1006,7 @@ impl VirtualWorkspaceManager {
         &mut self,
         space: SpaceId,
     ) -> Result<VirtualWorkspaceId, WorkspaceError> {
-        self.ensure_space_initialized(space);
+        self.ensure_space_initialized(space, None);
         if let Some(active_workspace_id) = self.active_workspace(space) {
             if self.workspaces.contains_key(active_workspace_id) {
                 return Ok(active_workspace_id);
@@ -1202,6 +1206,54 @@ impl VirtualWorkspaceManager {
         });
 
         best_overall.map(|(_, rule, _)| *rule)
+    }
+
+    pub fn target_workspace_for_app_info(
+        &mut self,
+        space: SpaceId,
+        app_bundle_id: Option<&str>,
+        app_name: Option<&str>,
+        window_title: Option<&str>,
+        ax_role: Option<&str>,
+        ax_subrole: Option<&str>,
+    ) -> Option<VirtualWorkspaceId> {
+        self.ensure_space_initialized(space, None);
+
+        let rule = self.find_matching_app_rule(
+            app_bundle_id,
+            app_name,
+            window_title,
+            ax_role,
+            ax_subrole,
+        );
+
+        let ws_sel = rule.and_then(|r| r.workspace.clone());
+
+        if let Some(ws_sel) = ws_sel {
+            let maybe_idx: Option<usize> = match ws_sel {
+                WorkspaceSelector::Index(i) => Some(i),
+                WorkspaceSelector::Name(name) => {
+                    let workspaces = self.list_workspaces(space);
+                    workspaces.iter().position(|(_, n)| n == &name)
+                }
+            };
+
+            if let Some(workspace_idx) = maybe_idx {
+                let len = self.workspaces_by_space.get(&space).map(|v| v.len()).unwrap_or(0);
+                if workspace_idx >= len {
+                    return self.get_default_workspace(space).ok();
+                } else {
+                    let workspaces = self.list_workspaces(space);
+                    if let Some((workspace_id, _)) = workspaces.get(workspace_idx) {
+                        return Some(*workspace_id);
+                    } else {
+                        return self.get_default_workspace(space).ok();
+                    }
+                }
+            }
+        }
+
+        self.get_default_workspace(space).ok()
     }
 
     pub fn get_stats(&self) -> WorkspaceStats {
