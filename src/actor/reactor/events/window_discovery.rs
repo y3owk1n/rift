@@ -329,20 +329,41 @@ impl WindowDiscoveryHandler {
     }
 
     /// Send layout events for discovered windows.
-    fn emit_layout_events(
+    pub fn emit_layout_events(
         reactor: &mut Reactor,
         pid: pid_t,
         known_visible: &[WindowId],
         app_info: &Option<AppInfo>,
     ) {
-        if !reactor.window_manager.windows.iter().any(|(wid, _)| wid.pid == pid) {
+        tracing::debug!(?pid, known_visible_count = known_visible.len(), "emit_layout_events called");
+        // Collect all window IDs for this pid from both windows and window_ids mappings.
+        // This handles the case where windows were discovered via window server (e.g., after wake)
+        // but not yet added to window_manager.windows.
+        let mut all_windows_for_pid: HashSet<WindowId> = reactor
+            .window_manager
+            .windows
+            .iter()
+            .filter(|(wid, _)| wid.pid == pid)
+            .map(|(wid, _)| *wid)
+            .collect();
+
+        // Also add windows from window_ids that aren't in windows yet
+        for (&_wsid, &wid) in &reactor.window_manager.window_ids {
+            if wid.pid == pid {
+                all_windows_for_pid.insert(wid);
+            }
+        }
+
+        if all_windows_for_pid.is_empty() {
+            tracing::debug!(?pid, "No windows found for pid, returning early");
             return;
         }
 
         let mut app_windows: BTreeMap<SpaceId, Vec<WindowId>> = BTreeMap::new();
         let mut included: HashSet<WindowId> = HashSet::default();
 
-        // Collect windows from visible window server IDs
+        // Collect windows from visible window server IDs first
+        tracing::debug!(?pid, visible_windows_count = reactor.window_manager.visible_windows.len(), "First loop: checking visible_windows");
         for wid in reactor
             .window_manager
             .visible_windows
@@ -358,14 +379,38 @@ impl WindowDiscoveryHandler {
             included.insert(wid);
             app_windows.entry(space).or_default().push(wid);
         }
+        tracing::debug!(?pid, included_count = included.len(), "First loop done");
 
-        // If we have no visible WSIDs (e.g., SpaceChanged provided empty ws_info),
-        // fall back to the app-reported known_visible list for this pid.
+        // For windows discovered via window server (e.g., after wake) that may not be
+        // in visible_windows yet, check if they're in known_visible or our tracked window_ids
+        tracing::debug!(?pid, known_visible_count = known_visible.len(), "Second loop: checking known_visible");
         for wid in known_visible.iter().copied().filter(|wid| wid.pid == pid) {
-            if included.contains(&wid) || !reactor.window_is_standard(wid) {
+            if included.contains(&wid) {
+                continue;
+            }
+            if !reactor.window_is_standard(wid) {
                 continue;
             }
             let Some(state) = reactor.window_manager.windows.get(&wid) else {
+                // Window might exist in window_ids but not yet in windows.
+                // Try to look up its window server info from the server directly.
+                let wsid = reactor.window_manager.window_ids.iter().find_map(|(ws, w)| {
+                    if w == &wid {
+                        Some(*ws)
+                    } else {
+                        None
+                    }
+                });
+                if wsid.is_some() {
+                    // Window exists on the server, add it to the layout
+                    let Some(space) =
+                        reactor.best_space_for_window_id(wid)
+                    else {
+                        continue;
+                    };
+                    included.insert(wid);
+                    app_windows.entry(space).or_default().push(wid);
+                }
                 continue;
             };
             let Some(space) =
@@ -377,24 +422,88 @@ impl WindowDiscoveryHandler {
             app_windows.entry(space).or_default().push(wid);
         }
 
+        // Also add any windows from our tracked window_ids that weren't already included.
+        // This handles windows discovered via wake recovery that apps haven't reported yet.
+        tracing::debug!(?pid, count = reactor.window_manager.window_ids.len(), "Third loop: checking window_ids");
+        for (&_wsid, &wid) in &reactor.window_manager.window_ids {
+            if wid.pid != pid {
+                continue;
+            }
+            if included.contains(&wid) {
+                continue;
+            }
+            if !reactor.window_is_standard(wid) {
+                continue;
+            }
+            tracing::debug!(?pid, ?wid, "Third loop: including window from window_ids");
+            // Even without full WindowInfo, we should still try to assign the window
+            // using just the window server info
+            let Some(space) = reactor.best_space_for_window_id(wid) else {
+                continue;
+            };
+            included.insert(wid);
+            app_windows.entry(space).or_default().push(wid);
+        }
+
         // For now, we'll assume known_visible is handled elsewhere or we need to pass it.
         // Looking back, the original method processes known_visible in the main logic.
         // Actually, the emit_layout_events should be called after processing, and we need to collect all windows.
 
         let screens = reactor.space_manager.screens.clone();
-        for screen in screens {
-            let Some(space) = reactor.space_manager.space_for_screen(&screen) else {
-                continue;
-            };
-            if !reactor.is_space_active(space) {
-                continue;
-            }
+        let active_spaces: Vec<_> = screens
+            .iter()
+            .filter_map(|screen| {
+                let space = reactor.space_manager.space_for_screen(screen)?;
+                if reactor.is_space_active(space) {
+                    Some(space)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let spaces_to_process: Vec<SpaceId> = if active_spaces.is_empty() {
+            tracing::debug!("No active spaces detected, using all known spaces for discovered windows");
+            screens
+                .iter()
+                .filter_map(|screen| reactor.space_manager.space_for_screen(screen))
+                .collect()
+        } else {
+            active_spaces
+        };
+
+        for space in spaces_to_process {
             let windows_for_space = app_windows.remove(&space).unwrap_or_default();
 
             if !windows_for_space.is_empty() {
                 for wid in &windows_for_space {
-                    let title_opt =
-                        reactor.window_manager.windows.get(wid).map(|w| w.title.clone());
+                    // Get window info from cache or query the server directly
+                    let (title_opt, ax_role, ax_subrole) = if let Some(window) =
+                        reactor.window_manager.windows.get(wid)
+                    {
+                        (
+                            Some(window.title.clone()),
+                            window.ax_role.clone(),
+                            window.ax_subrole.clone(),
+                        )
+                    } else {
+                        // If window is not in our cache, we don't have full info yet.
+                        // But if it's in window_ids, we know it exists and should be added.
+                        let wsid = reactor.window_manager.window_ids.iter().find_map(|(ws, w)| {
+                            if w == wid {
+                                Some(*ws)
+                            } else {
+                                None
+                            }
+                        });
+                        if wsid.is_some() {
+                            (None, None, None)
+                        } else {
+                            // Window not in cache and not in window_ids - skip it
+                            continue;
+                        }
+                    };
+
                     let assign_result = reactor
                         .layout_manager
                         .layout_engine
@@ -403,18 +512,12 @@ impl WindowDiscoveryHandler {
                             *wid,
                             space,
                             app_info.as_ref().and_then(|a| a.bundle_id.as_deref()),
-                            app_info.as_ref().and_then(|a| a.localized_name.as_deref()),
+                            app_info
+                                .as_ref()
+                                .and_then(|a| a.localized_name.as_deref()),
                             title_opt.as_deref(),
-                            reactor
-                                .window_manager
-                                .windows
-                                .get(wid)
-                                .and_then(|w| w.ax_role.as_deref()),
-                            reactor
-                                .window_manager
-                                .windows
-                                .get(wid)
-                                .and_then(|w| w.ax_subrole.as_deref()),
+                            ax_role.as_deref(),
+                            ax_subrole.as_deref(),
                         );
 
                     match assign_result {
@@ -460,13 +563,9 @@ impl WindowDiscoveryHandler {
                         .unwrap_or(false)
                 })
                 .map(|&wid| {
-                    let title_opt =
-                        reactor.window_manager.windows.get(&wid).map(|w| w.title.clone());
-                    let ax_role =
-                        reactor.window_manager.windows.get(&wid).and_then(|w| w.ax_role.clone());
-                    let ax_subrole =
-                        reactor.window_manager.windows.get(&wid).and_then(|w| w.ax_subrole.clone());
-                    (wid, title_opt, ax_role, ax_subrole)
+                    // Window info should be in our cache for manageable windows
+                    let window = reactor.window_manager.windows.get(&wid).unwrap();
+                    (wid, Some(window.title.clone()), window.ax_role.clone(), window.ax_subrole.clone())
                 })
                 .collect();
 
