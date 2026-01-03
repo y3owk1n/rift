@@ -37,7 +37,15 @@
 - when quiting rift, it will try to move all the windows (including hidden) to its position, so that we can use it right away
 - when wake from sleep, everything should still be the same as before sleep (layouts, arrangments, windows, etc)
 - performance improvements on race conditions
+- disabled animation by default
 - added more tests
+
+### How to install this fork?
+
+- There's no binary release for this yet, to not confuse anyone
+- You can clone this repo and build it yourself with rust
+- I normally just use this in my nix-darwin with home manager, just search `rift` in my nix-darwin repo [here](https://github.com/y3owk1n/nix-system-config-v2)
+- No configuration changes, exact same `rift` configuration will still work
 
 ### Contribute back to the original repo?
 
