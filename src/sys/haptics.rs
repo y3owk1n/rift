@@ -1,5 +1,5 @@
 #![allow(non_camel_case_types)]
-use std::ffi::{CStr, c_char, c_void};
+use std::ffi::{c_char, c_void, CStr};
 
 use objc2_core_foundation::{CFNumber, CFNumberType, CFRetained, CFString, CFType};
 use once_cell::sync::OnceCell;
@@ -42,7 +42,7 @@ unsafe extern "C" {
     fn MTActuatorOpen(actuator: *mut CFType) -> i32; // IOReturn
     fn MTActuatorIsOpen(actuator: *mut CFType) -> bool;
     fn MTActuatorActuate(actuator: *mut CFType, pattern: i32, unk: i32, f1: f32, f2: f32) -> i32; // IOReturn
-    //fn MTActuatorClose(actuator: CFTypeRef);
+                                                                                                  //fn MTActuatorClose(actuator: CFTypeRef);
 
     fn CFGetTypeID(cf: *mut CFType) -> usize;
     fn CFNumberGetTypeID() -> usize;
@@ -50,12 +50,21 @@ unsafe extern "C" {
 }
 
 #[inline]
-fn k_iomain_port_default() -> mach_port_t { 0 }
+fn k_iomain_port_default() -> mach_port_t {
+    0
+}
 
+/// Manages multitouch device actuators for haptic feedback.
+/// The actuators are opened once and accessed read-only thereafter.
 struct MtsState {
     actuators: Vec<*mut CFType>,
 }
 
+// SAFETY: MtsState contains raw pointers to IOKit objects (MTActuatorCreateFromDeviceID).
+// These objects are created once during initialization and never modified.
+// macOS IOKit objects are thread-safe for concurrent access. The OnceCell initialization
+// ensures thread-safe one-time initialization. The Vec and pointers are never accessed
+// after the owning MtsState is dropped.
 unsafe impl Send for MtsState {}
 unsafe impl Sync for MtsState {}
 

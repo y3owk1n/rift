@@ -78,7 +78,11 @@ impl Event {
                 &mut out as *mut T as *mut c_void,
             )
         };
-        if status == NO_ERR { Some(out) } else { None }
+        if status == NO_ERR {
+            Some(out)
+        } else {
+            None
+        }
     }
 }
 
@@ -115,20 +119,26 @@ trait CallbackErased: Send {
 }
 
 struct CbOnly<F>
-where F: FnMut(Event) -> OSStatus + Send + 'static {
+where
+    F: FnMut(Event) -> OSStatus + Send + 'static,
+{
     f: F,
 }
 
 impl<F> CallbackErased for CbOnly<F>
-where F: FnMut(Event) -> OSStatus + Send + 'static
+where
+    F: FnMut(Event) -> OSStatus + Send + 'static,
 {
-    fn call(&mut self, ev: Event) -> OSStatus { (self.f)(ev) }
+    fn call(&mut self, ev: Event) -> OSStatus {
+        (self.f)(ev)
+    }
 }
 
 struct CbWithState<F, T>
 where
     F: FnMut(Event, &mut T) -> OSStatus + Send + 'static,
-    T: Send + 'static, {
+    T: Send + 'static,
+{
     f: F,
     t: T,
 }
@@ -138,7 +148,9 @@ where
     F: FnMut(Event, &mut T) -> OSStatus + Send + 'static,
     T: Send + 'static,
 {
-    fn call(&mut self, ev: Event) -> OSStatus { (self.f)(ev, &mut self.t) }
+    fn call(&mut self, ev: Event) -> OSStatus {
+        (self.f)(ev, &mut self.t)
+    }
 }
 
 struct CallbackCtx {
@@ -159,11 +171,18 @@ unsafe extern "C" fn trampoline(
     ctx.inner.call(ev)
 }
 
+/// Represents a Carbon event listener with a callback context.
+/// Used for receiving system-wide hotkey events via the Carbon API.
 pub struct CarbonListener {
     handler_ref: EventHandlerRef,
     ctx: *mut c_void,
 }
 
+// SAFETY: CarbonListener wraps EventHandlerRef and callback context pointer from the Carbon API.
+// These are created once during installation and the API is thread-safe for event handling.
+// The listener is only used via the provided constructors and drop impl, which properly
+// manage the lifetime of the underlying Carbon event handler. The raw pointers are only
+// accessed during construction and destruction on the same thread that created them.
 unsafe impl Send for CarbonListener {}
 unsafe impl Sync for CarbonListener {}
 
@@ -177,7 +196,9 @@ impl std::fmt::Debug for CarbonListener {
 
 impl CarbonListener {
     pub fn new<F>(target: Target, types: &[EventType], mut callback: F) -> Result<Self, String>
-    where F: FnMut(Event) -> OSStatus + Send + 'static {
+    where
+        F: FnMut(Event) -> OSStatus + Send + 'static,
+    {
         Self::install_impl(target, types, Box::new(CbOnly { f: move |e| (callback)(e) }))
     }
 
@@ -195,7 +216,9 @@ impl CarbonListener {
     }
 
     pub fn application<F>(types: &[EventType], callback: F) -> Result<Self, String>
-    where F: FnMut(Event) -> OSStatus + Send + 'static {
+    where
+        F: FnMut(Event) -> OSStatus + Send + 'static,
+    {
         Self::new(Target::Application, types, callback)
     }
 
@@ -257,5 +280,7 @@ impl CarbonListener {
 }
 
 impl Drop for CarbonListener {
-    fn drop(&mut self) { let _ = self.remove(); }
+    fn drop(&mut self) {
+        let _ = self.remove();
+    }
 }

@@ -296,14 +296,12 @@ struct ConfigFile {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub settings: Settings,
     pub keys: Vec<(Hotkey, WmCommand)>,
     pub virtual_workspaces: VirtualWorkspaceSettings,
 }
-
-unsafe impl Send for Config {}
-unsafe impl Sync for Config {}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(deny_unknown_fields)]
