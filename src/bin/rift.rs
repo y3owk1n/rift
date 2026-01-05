@@ -137,7 +137,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
         }
         Err(_) => {
             println!("No config file found, using default configuration");
-            Config::default()
+            Config::default().expect("Failed to parse embedded default config - this is a bug")
         }
     };
     config.settings.animate &= !opt.no_animate;

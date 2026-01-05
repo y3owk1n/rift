@@ -892,8 +892,8 @@ impl Config {
         Self::parse(&buf)
     }
 
-    pub fn default() -> Config {
-        Self::parse(include_str!("../../rift.default.toml")).unwrap()
+    pub fn default() -> anyhow::Result<Config> {
+        Self::parse(include_str!("../../rift.default.toml"))
     }
 
     /// Save the current config to a file
@@ -1477,7 +1477,8 @@ mod tests {
 
     #[test]
     fn test_config_validate_empty_is_valid() {
-        let config = Config::default();
+        let config =
+            Config::default().expect("Failed to parse embedded default config - this is a bug");
         let issues = config.validate();
         assert!(issues.is_empty(), "Expected no issues, got: {:?}", issues);
     }

@@ -7,14 +7,15 @@ use crate::actor::app::{AppThreadHandle, Request, WindowId};
 use crate::common::collections::BTreeMap;
 use crate::common::config::Config;
 use crate::layout_engine::LayoutEngine;
-use crate::sys::app::{AppInfo, WindowInfo, pid_t};
+use crate::sys::app::{pid_t, AppInfo, WindowInfo};
 use crate::sys::geometry::SameAs;
 use crate::sys::screen::SpaceId;
 use crate::sys::window_server::{WindowServerId, WindowServerInfo};
 
 impl Reactor {
     pub fn new_for_test(layout: LayoutEngine) -> Reactor {
-        let mut config = Config::default();
+        let mut config =
+            Config::default().expect("Failed to parse embedded default config - this is a bug");
         config.settings.default_disable = false;
         config.settings.animate = false;
         let record = Record::new_for_test(tempfile::NamedTempFile::new().unwrap());
@@ -97,7 +98,9 @@ pub fn make_window(idx: usize) -> WindowInfo {
     }
 }
 
-pub fn make_windows(count: usize) -> Vec<WindowInfo> { (1..=count).map(make_window).collect() }
+pub fn make_windows(count: usize) -> Vec<WindowInfo> {
+    (1..=count).map(make_window).collect()
+}
 
 pub struct Apps {
     tx: actor::Sender<Request>,
@@ -137,10 +140,13 @@ impl Apps {
         with_ws_info: bool,
     ) -> Vec<Event> {
         for (id, info) in (1..).map(|idx| WindowId::new(pid, idx)).zip(&windows) {
-            self.windows.insert(id, WindowState {
-                frame: info.frame,
-                ..Default::default()
-            });
+            self.windows.insert(
+                id,
+                WindowState {
+                    frame: info.frame,
+                    ..Default::default()
+                },
+            );
         }
         let handle = AppThreadHandle::new_for_test(self.tx.clone());
         vec![Event::ApplicationLaunched {
