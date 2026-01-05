@@ -7,13 +7,13 @@ use dispatchr::time::Time;
 use objc2_app_kit::NSWindowLevel;
 use objc2_application_services::AXError;
 use objc2_core_foundation::{
-    CFArray, CFBoolean, CFDictionary, CFNumber, CFRetained, CFString, CFType, CGPoint, CGRect,
-    CGSize, Type, kCFBooleanTrue,
+    kCFBooleanTrue, CFArray, CFBoolean, CFDictionary, CFNumber, CFRetained, CFString, CFType,
+    CGPoint, CGRect, CGSize, Type,
 };
 use objc2_core_graphics::{
+    kCGNullWindowID, kCGWindowBounds, kCGWindowLayer, kCGWindowNumber, kCGWindowOwnerPID,
     CGBitmapInfo, CGColorSpace, CGContext, CGError, CGImage, CGInterpolationQuality, CGWindowID,
-    CGWindowListCopyWindowInfo, CGWindowListOption, kCGNullWindowID, kCGWindowBounds,
-    kCGWindowLayer, kCGWindowNumber, kCGWindowOwnerPID,
+    CGWindowListCopyWindowInfo, CGWindowListOption,
 };
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -36,15 +36,21 @@ pub struct WindowServerId(pub CGWindowID);
 
 impl WindowServerId {
     #[inline]
-    pub fn new(id: CGWindowID) -> Self { Self(id) }
+    pub fn new(id: CGWindowID) -> Self {
+        Self(id)
+    }
 
     #[inline]
-    pub fn as_u32(self) -> u32 { self.0 }
+    pub fn as_u32(self) -> u32 {
+        self.0
+    }
 }
 
 impl From<WindowServerId> for u32 {
     #[inline]
-    fn from(id: WindowServerId) -> Self { id.0 }
+    fn from(id: WindowServerId) -> Self {
+        id.0
+    }
 }
 
 impl TryFrom<&AXUIElement> for WindowServerId {
@@ -61,7 +67,9 @@ impl TryFrom<&AXUIElement> for WindowServerId {
 }
 
 impl From<WindowId> for WindowServerId {
-    fn from(id: WindowId) -> Self { Self(id.idx.into()) }
+    fn from(id: WindowId) -> Self {
+        Self(id.idx.into())
+    }
 }
 
 #[inline]
@@ -103,7 +111,9 @@ impl WindowQuery {
     }
 
     #[inline]
-    pub fn count(&self) -> i32 { unsafe { SLSWindowIteratorGetCount(self.iter) } }
+    pub fn count(&self) -> i32 {
+        unsafe { SLSWindowIteratorGetCount(self.iter) }
+    }
 
     #[inline]
     pub fn advance<'a>(&'a self) -> Option<&'a Self> {
@@ -115,27 +125,41 @@ impl WindowQuery {
     }
 
     #[inline]
-    pub fn window_id(&self) -> u32 { unsafe { SLSWindowIteratorGetWindowID(self.iter) } }
+    pub fn window_id(&self) -> u32 {
+        unsafe { SLSWindowIteratorGetWindowID(self.iter) }
+    }
 
     #[inline]
-    pub fn level(&self) -> i32 { unsafe { SLSWindowIteratorGetLevel(self.iter) } }
+    pub fn level(&self) -> i32 {
+        unsafe { SLSWindowIteratorGetLevel(self.iter) }
+    }
 
     #[inline]
-    pub fn pid(&self) -> i32 { unsafe { SLSWindowIteratorGetPID(self.iter) } }
+    pub fn pid(&self) -> i32 {
+        unsafe { SLSWindowIteratorGetPID(self.iter) }
+    }
 
     #[inline]
-    pub fn parent_id(&self) -> u32 { unsafe { SLSWindowIteratorGetParentID(self.iter) } }
+    pub fn parent_id(&self) -> u32 {
+        unsafe { SLSWindowIteratorGetParentID(self.iter) }
+    }
 
     #[inline]
-    pub fn bounds(&self) -> CGRect { unsafe { SLSWindowIteratorGetBounds(self.iter) } }
+    pub fn bounds(&self) -> CGRect {
+        unsafe { SLSWindowIteratorGetBounds(self.iter) }
+    }
 
     #[inline]
     #[allow(dead_code)]
-    pub fn tags(&self) -> u64 { unsafe { SLSWindowIteratorGetTags(self.iter) } }
+    pub fn tags(&self) -> u64 {
+        unsafe { SLSWindowIteratorGetTags(self.iter) }
+    }
 
     #[inline]
     #[allow(dead_code)]
-    pub fn attributes(&self) -> u64 { unsafe { SLSWindowIteratorGetAttributes(self.iter) } }
+    pub fn attributes(&self) -> u64 {
+        unsafe { SLSWindowIteratorGetAttributes(self.iter) }
+    }
 }
 
 impl Drop for WindowQuery {
@@ -201,11 +225,10 @@ pub fn window_is_sticky(id: WindowServerId) -> bool {
     let space_list_ref = unsafe {
         SLSCopySpacesForWindows(*G_CONNECTION, 0x7, CFRetained::as_ptr(&cf_windows).as_ptr())
     };
-    if space_list_ref.is_null() {
+    let Some(space_list_ref) = NonNull::new(space_list_ref) else {
         return false;
-    }
-    let spaces_cf: CFRetained<CFArray<CFNumber>> =
-        unsafe { CFRetained::retain(NonNull::new_unchecked(space_list_ref)) };
+    };
+    let spaces_cf: CFRetained<CFArray<CFNumber>> = unsafe { CFRetained::from_raw(space_list_ref) };
     spaces_cf.len() > 1
 }
 
@@ -329,7 +352,9 @@ pub fn get_window(id: WindowServerId) -> Option<WindowServerInfo> {
     (ws.len() == 1).then(|| ws.remove(0))
 }
 
-pub fn window_exists(id: WindowServerId) -> bool { get_window(id).is_some() }
+pub fn window_exists(id: WindowServerId) -> bool {
+    get_window(id).is_some()
+}
 
 fn get_num(dict: &CFDictionary<CFString, CFType>, key: &'static CFString) -> Option<i64> {
     dict.get(key)?.downcast::<CFNumber>().ok()?.as_i64()
@@ -378,7 +403,9 @@ pub fn window_under_cursor() -> Option<WindowServerId> {
 }
 
 #[cfg(test)]
-pub fn window_level(_wid: u32) -> Option<NSWindowLevel> { Some(0) }
+pub fn window_level(_wid: u32) -> Option<NSWindowLevel> {
+    Some(0)
+}
 
 #[cfg(not(test))]
 pub fn window_level(wid: u32) -> Option<NSWindowLevel> {
@@ -606,9 +633,15 @@ pub fn window_space_id(cid: i32, wid: u32) -> u64 {
     0
 }
 
-pub fn space_is_user(sid: u64) -> bool { unsafe { SLSSpaceGetType(*G_CONNECTION, sid) == 0 } }
-pub fn space_is_fullscreen(sid: u64) -> bool { unsafe { SLSSpaceGetType(*G_CONNECTION, sid) == 4 } }
-pub fn space_is_system(sid: u64) -> bool { unsafe { SLSSpaceGetType(*G_CONNECTION, sid) == 2 } }
+pub fn space_is_user(sid: u64) -> bool {
+    unsafe { SLSSpaceGetType(*G_CONNECTION, sid) == 0 }
+}
+pub fn space_is_fullscreen(sid: u64) -> bool {
+    unsafe { SLSSpaceGetType(*G_CONNECTION, sid) == 4 }
+}
+pub fn space_is_system(sid: u64) -> bool {
+    unsafe { SLSSpaceGetType(*G_CONNECTION, sid) == 2 }
+}
 pub fn wait_for_native_fullscreen_transition() {
     while !space_is_user(unsafe { CGSGetActiveSpace(*G_CONNECTION) }) {
         Timer::sleep(Duration::from_millis(100));
@@ -620,10 +653,14 @@ pub struct CapturedWindowImage(CFRetained<CGImage>);
 
 impl CapturedWindowImage {
     #[inline]
-    pub fn as_ptr(&self) -> *mut CGImage { CFRetained::as_ptr(&self.0).as_ptr() }
+    pub fn as_ptr(&self) -> *mut CGImage {
+        CFRetained::as_ptr(&self.0).as_ptr()
+    }
 
     #[inline]
-    pub fn cg_image(&self) -> &CGImage { self.0.as_ref() }
+    pub fn cg_image(&self) -> &CGImage {
+        self.0.as_ref()
+    }
 }
 
 #[link(name = "CoreGraphics", kind = "framework")]
