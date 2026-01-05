@@ -133,7 +133,16 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
     config.settings.default_disable |= opt.default_disable;
 
     if opt.validate {
-        LayoutEngine::load(restore_file()).unwrap();
+        let config = Config::read(&config_path).unwrap();
+        let issues = config.validate();
+        if issues.is_empty() {
+            println!("Config validation passed");
+        } else {
+            for issue in issues {
+                eprintln!("{}", issue);
+            }
+            process::exit(1);
+        }
         return;
     }
 

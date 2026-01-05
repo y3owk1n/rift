@@ -39,6 +39,7 @@
 - performance improvements on race conditions
 - disabled animation by default
 - added more tests
+- fixed `--validate` flag to actually validate the config file instead of the restore file
 
 ### How to install this fork?
 
