@@ -232,10 +232,14 @@ pub fn spawn_app_thread(
     events_tx: reactor::Sender,
     tx_store: Option<WindowTxStore>,
 ) {
-    thread::Builder::new()
-        .name(format!("{}({pid})", info.bundle_id.as_deref().unwrap_or("")))
+    let thread_name = format!("{}({})", info.bundle_id.as_deref().unwrap_or(""), pid);
+    let bundle_id = info.bundle_id.clone();
+    if let Err(e) = thread::Builder::new()
+        .name(thread_name)
         .spawn(move || app_thread_main(pid, info, events_tx, tx_store))
-        .unwrap();
+    {
+        error!(pid, name = %bundle_id.as_deref().unwrap_or(""), "Failed to spawn app thread: {e}");
+    }
 }
 
 struct State {
