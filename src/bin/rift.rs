@@ -103,7 +103,10 @@ fn main() {
     log::init_logging();
     install_panic_hook();
 
-    let mtm = MainThreadMarker::new().unwrap();
+    let mtm = MainThreadMarker::new().expect(
+        "Rift must be run from the main thread. \
+        This is a macOS requirement for window management functionality.",
+    );
     {
         use objc2_app_kit::{NSApplication, NSApplicationActivationPolicy};
         let app = NSApplication::sharedApplication(mtm);

@@ -190,7 +190,7 @@ impl WmController {
             spawning_apps: HashSet::default(),
             known_apps: HashSet::default(),
             hotkeys_registered: false,
-            mtm: MainThreadMarker::new().unwrap(),
+            mtm: MainThreadMarker::new().expect("WmController must be created on the main thread"),
             screen_params_received: false,
         };
         (this, sender)
