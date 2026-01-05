@@ -1,6 +1,6 @@
 use std::cell::Cell;
-use std::collections::HashMap;
 use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::ffi::c_void;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -10,10 +10,10 @@ use dispatchr::time::Time;
 pub use nix::libc::pid_t;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2::{AnyThread, DefinedClass, define_class, msg_send};
+use objc2::{define_class, msg_send, AnyThread, DefinedClass};
 use objc2_app_kit::{NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace};
 use objc2_core_foundation::CGRect;
-use objc2_foundation::{NSCopying, NSObject, NSObjectProtocol, NSString, ns_string};
+use objc2_foundation::{ns_string, NSCopying, NSObject, NSObjectProtocol, NSString};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use super::geometry::CGRectDef;
 use super::window_server::{WindowServerId, WindowServerInfo};
 use crate::sys::axuielement::{
-    AX_STANDARD_WINDOW_SUBROLE, AX_WINDOW_ROLE, AXUIElement, Error as AxError,
+    AXUIElement, Error as AxError, AX_STANDARD_WINDOW_SUBROLE, AX_WINDOW_ROLE,
 };
 use crate::sys::dispatch::DispatchExt;
 
@@ -236,12 +236,19 @@ fn schedule_observer_cleanup(pid: pid_t) {
     queue::main().after_f(Time::NOW, Box::into_raw(ctx) as *mut c_void, cleanup_observer);
 }
 
+// Activation policy observer state
+// Lock order: ACTIVATION_POLICY_CALLBACK -> ACTIVATION_POLICY_OBSERVERS
+// These are always accessed together in that order within the same function.
 static ACTIVATION_POLICY_CALLBACK: Lazy<Mutex<Option<ActivationPolicyCallback>>> =
     Lazy::new(|| Mutex::new(None));
 
 static ACTIVATION_POLICY_OBSERVERS: Lazy<Mutex<HashMap<pid_t, usize>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
+// Finished launching observer state
+// Lock order: FINISHED_LAUNCHING_CALLBACK -> FINISHED_LAUNCHING_OBSERVERS
+// These are always accessed together in that order within the same function.
+// The two groups (activation policy and finished launching) are independent.
 static FINISHED_LAUNCHING_CALLBACK: Lazy<Mutex<Option<ActivationPolicyCallback>>> =
     Lazy::new(|| Mutex::new(None));
 
@@ -249,18 +256,26 @@ static FINISHED_LAUNCHING_OBSERVERS: Lazy<Mutex<HashMap<pid_t, usize>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn set_activation_policy_callback<F>(callback: F)
-where F: Fn(pid_t, AppInfo) + Send + Sync + 'static {
+where
+    F: Fn(pid_t, AppInfo) + Send + Sync + 'static,
+{
     *ACTIVATION_POLICY_CALLBACK.lock() = Some(Arc::new(callback));
 }
 
-pub fn clear_activation_policy_callback() { *ACTIVATION_POLICY_CALLBACK.lock() = None; }
+pub fn clear_activation_policy_callback() {
+    *ACTIVATION_POLICY_CALLBACK.lock() = None;
+}
 
 pub fn set_finished_launching_callback<F>(callback: F)
-where F: Fn(pid_t, AppInfo) + Send + Sync + 'static {
+where
+    F: Fn(pid_t, AppInfo) + Send + Sync + 'static,
+{
     *FINISHED_LAUNCHING_CALLBACK.lock() = Some(Arc::new(callback));
 }
 
-pub fn clear_finished_launching_callback() { *FINISHED_LAUNCHING_CALLBACK.lock() = None; }
+pub fn clear_finished_launching_callback() {
+    *FINISHED_LAUNCHING_CALLBACK.lock() = None;
+}
 
 pub fn ensure_activation_policy_observer(pid: pid_t, info: AppInfo) {
     let callback = ACTIVATION_POLICY_CALLBACK.lock().clone();
@@ -374,11 +389,17 @@ impl NSRunningApplicationExt for NSRunningApplication {
         NSRunningApplication::runningApplicationWithProcessIdentifier(pid)
     }
 
-    fn pid(&self) -> pid_t { self.processIdentifier() }
+    fn pid(&self) -> pid_t {
+        self.processIdentifier()
+    }
 
-    fn bundle_id(&self) -> Option<Retained<NSString>> { self.bundleIdentifier() }
+    fn bundle_id(&self) -> Option<Retained<NSString>> {
+        self.bundleIdentifier()
+    }
 
-    fn localized_name(&self) -> Option<Retained<NSString>> { self.localizedName() }
+    fn localized_name(&self) -> Option<Retained<NSString>> {
+        self.localizedName()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
