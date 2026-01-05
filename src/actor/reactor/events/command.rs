@@ -9,9 +9,9 @@ use crate::actor::wm_controller::WmEvent;
 use crate::actor::{menu_bar, raise_manager};
 use crate::common::collections::HashMap;
 use crate::common::config::{self as config, Config};
-use crate::common::log::{MetricsCommand, handle_command};
+use crate::common::log::{handle_command, MetricsCommand};
 use crate::layout_engine::{EventResponse, LayoutCommand, LayoutEvent};
-use crate::sys::screen::{SpaceId, order_visible_spaces_by_position};
+use crate::sys::screen::{order_visible_spaces_by_position, SpaceId};
 use crate::sys::window_server::{self as window_server, WindowServerId};
 
 pub struct CommandEventHandler;
@@ -231,7 +231,8 @@ impl CommandEventHandler {
 
     pub fn handle_command_reactor_save_and_exit(reactor: &mut Reactor) {
         reactor.restore_windows_on_exit();
-        match reactor.layout_manager.layout_engine.save(config::restore_file()) {
+        let restore_path = config::restore_file().expect("Failed to determine restore file path");
+        match reactor.layout_manager.layout_engine.save(restore_path) {
             Ok(()) => std::process::exit(0),
             Err(e) => {
                 error!("Could not save layout: {e}");

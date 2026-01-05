@@ -123,7 +123,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
         std::process::exit(1);
     }
 
-    let config_path = opt.config.clone().unwrap_or_else(|| config_file());
+    let config_path = opt.config.clone().unwrap_or_else(|| config_file().expect("Failed to determine config file path"));
     let mut config = if config_path.exists() {
         Config::read(&config_path).unwrap()
     } else {
@@ -150,8 +150,10 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
 
     let (broadcast_tx, broadcast_rx) = rift_wm::actor::channel();
 
+    let restore_path = restore_file().expect("Failed to determine restore file path");
+    let restore_path_for_wm = restore_path.clone();
     let layout = if opt.restore {
-        LayoutEngine::load(restore_file()).unwrap()
+        LayoutEngine::load(restore_path).unwrap()
     } else {
         LayoutEngine::new(
             &config.virtual_workspaces,
@@ -222,7 +224,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
 
     let wm_config = wm_controller::Config {
         one_space: opt.one,
-        restore_file: restore_file(),
+        restore_file: restore_path_for_wm,
         config: config.clone(),
     };
     let (mc_tx, mc_rx) = rift_wm::actor::channel();
