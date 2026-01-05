@@ -170,7 +170,19 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
     let restore_path = restore_file().expect("Failed to determine restore file path");
     let restore_path_for_wm = restore_path.clone();
     let layout = if opt.restore {
-        LayoutEngine::load(restore_path).unwrap()
+        match LayoutEngine::load(restore_path) {
+            Ok(layout) => layout,
+            Err(e) => {
+                eprintln!("Error loading layout file: {}", e);
+                eprintln!("\nThe saved layout may be corrupted or incompatible with this version.");
+                eprintln!("Starting with a fresh layout configuration.");
+                LayoutEngine::new(
+                    &config.virtual_workspaces,
+                    &config.settings.layout,
+                    Some(broadcast_tx.clone()),
+                )
+            }
+        }
     } else {
         LayoutEngine::new(
             &config.virtual_workspaces,
