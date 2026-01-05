@@ -4,7 +4,7 @@ use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use tracing::{debug, trace};
 
 use super::TransactionId;
-use crate::actor::app::{AppThreadHandle, Request, WindowId, pid_t};
+use crate::actor::app::{pid_t, AppThreadHandle, Request, WindowId};
 use crate::actor::reactor::Reactor;
 use crate::common::collections::HashMap;
 use crate::common::config::AnimationEasing;
@@ -141,7 +141,9 @@ fn ease(t: f64) -> f64 {
     }
 }
 
-fn blend(a: f64, b: f64, s: f64) -> f64 { (1.0 - s) * a + s * b }
+fn blend(a: f64, b: f64, s: f64) -> f64 {
+    (1.0 - s) * a + s * b
+}
 
 pub struct AnimationManager;
 
@@ -177,23 +179,32 @@ impl AnimationManager {
             }
 
             let target_frame = target_frame.round();
-            let (current_frame, window_server_id, txid) =
-                match reactor.window_manager.windows.get_mut(&wid) {
-                    Some(window) => {
-                        let current_frame = window.frame_monotonic;
-                        if target_frame.same_as(current_frame) {
-                            continue;
-                        }
-                        any_frame_changed = true;
-                        let wsid = window.window_server_id.unwrap();
-                        let txid = reactor.transaction_manager.generate_next_txid(wsid);
-                        (current_frame, Some(wsid), txid)
-                    }
-                    None => {
-                        debug!(?wid, "Skipping - window no longer exists");
+            let (current_frame, window_server_id, txid) = match reactor
+                .window_manager
+                .windows
+                .get_mut(&wid)
+            {
+                Some(window) => {
+                    let current_frame = window.frame_monotonic;
+                    if target_frame.same_as(current_frame) {
                         continue;
                     }
-                };
+                    any_frame_changed = true;
+                    let wsid = match window.window_server_id {
+                        Some(id) => id,
+                        None => {
+                            debug!(?wid, "Skipping - window not yet registered with window server");
+                            continue;
+                        }
+                    };
+                    let txid = reactor.transaction_manager.generate_next_txid(wsid);
+                    (current_frame, Some(wsid), txid)
+                }
+                None => {
+                    debug!(?wid, "Skipping - window no longer exists");
+                    continue;
+                }
+            };
 
             let Some(app_state) = &reactor.app_manager.apps.get(&wid.pid) else {
                 debug!(?wid, "Skipping for window - app no longer exists");
