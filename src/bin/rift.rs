@@ -124,16 +124,33 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
     }
 
     let config_path = opt.config.clone().unwrap_or_else(|| config_file().expect("Failed to determine config file path"));
-    let mut config = if config_path.exists() {
-        Config::read(&config_path).unwrap()
-    } else {
-        Config::default()
+    let mut config = match Config::read(&config_path) {
+        Ok(cfg) => cfg,
+        Err(e) if config_path.exists() => {
+            eprintln!("Error reading config file at {}: {}", config_path.display(), e);
+            eprintln!("\nPossible causes:");
+            eprintln!("  - File is not valid TOML");
+            eprintln!("  - Contains unsupported configuration options");
+            eprintln!("  - File permissions issue");
+            eprintln!("\nRun 'rift --validate' for more details, or delete the file to use defaults.");
+            process::exit(1);
+        }
+        Err(_) => {
+            println!("No config file found, using default configuration");
+            Config::default()
+        }
     };
     config.settings.animate &= !opt.no_animate;
     config.settings.default_disable |= opt.default_disable;
 
     if opt.validate {
-        let config = Config::read(&config_path).unwrap();
+        let config = match Config::read(&config_path) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                eprintln!("Error parsing config file: {e}");
+                process::exit(1);
+            }
+        };
         let issues = config.validate();
         if issues.is_empty() {
             println!("Config validation passed");
