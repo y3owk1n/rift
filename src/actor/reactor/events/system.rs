@@ -109,7 +109,7 @@ impl SystemEventHandler {
                 continue;
             }
 
-            let idx = NonZeroU32::new(wsid.as_u32()).expect("Window server id was 0");
+            let idx = NonZeroU32::new(wsid.as_u32()).expect("Window server ID should never be 0");
             let wid = WindowId { pid: info.pid, idx };
 
             debug!(

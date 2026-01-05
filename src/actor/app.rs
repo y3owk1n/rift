@@ -1146,7 +1146,10 @@ impl State {
         });
 
         let idx = window_server_id
-            .map(|sid| NonZeroU32::new(sid.as_u32()).expect("Window server id was 0"))
+            .map(|sid| {
+                NonZeroU32::new(sid.as_u32())
+                    .expect("Window server ID should never be 0")
+            })
             .unwrap_or_else(|| {
                 self.last_window_idx += 1;
                 NonZeroU32::new(self.last_window_idx).unwrap()
@@ -1251,7 +1254,8 @@ impl State {
         if let Ok(id) = WindowServerId::try_from(elem) {
             let wid = WindowId {
                 pid: self.pid,
-                idx: NonZeroU32::new(id.as_u32()).expect("Window server id was 0"),
+                idx: NonZeroU32::new(id.as_u32())
+                    .expect("Window server ID should never be 0"),
             };
             if self.windows.contains_key(&wid) {
                 return Ok(wid);
