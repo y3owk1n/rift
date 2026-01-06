@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use objc2_core_foundation::CGRect;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
@@ -1398,9 +1400,7 @@ impl TraditionalLayoutSystem {
     }
 
     fn move_over(&self, from: NodeId, direction: Direction) -> Option<NodeId> {
-        let Some(parent) = from.parent(&self.tree.map) else {
-            return None;
-        };
+        let parent = from.parent(&self.tree.map)?;
         if self.tree.data.layout.kind(parent).orientation() == direction.orientation() {
             match direction {
                 Direction::Left | Direction::Up => from.prev_sibling(&self.tree.map),
@@ -1616,10 +1616,11 @@ impl TraditionalLayoutSystem {
         let old_parent = node.parent(&self.tree.map);
         let parent = if node.prev_sibling(&self.tree.map).is_none()
             && node.next_sibling(&self.tree.map).is_none()
-            && old_parent.is_some()
         {
-            old_parent.unwrap()
+            old_parent
         } else {
+            None
+        }.unwrap_or_else(|| {
             let new_parent = if let Some(old_parent) = old_parent {
                 let is_selection =
                     self.tree.data.selection.local_selection(self.map(), old_parent) == Some(node);
@@ -1637,7 +1638,7 @@ impl TraditionalLayoutSystem {
             };
             self.tree.data.selection.select_locally(&self.tree.map, node);
             new_parent
-        };
+        });
         self.tree.data.layout.set_kind(parent, kind);
         parent
     }
@@ -2001,7 +2002,7 @@ impl Layout {
     }
 
     fn proportion(&self, map: &NodeMap, node: NodeId) -> Option<f64> {
-        let Some(parent) = node.parent(map) else { return None };
+        let parent = node.parent(map)?;
         Some(f64::from(self.info[node].size) / f64::from(self.info[parent].total))
     }
 

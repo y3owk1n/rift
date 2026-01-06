@@ -56,11 +56,7 @@ impl DragManager {
         new_frame: CGRect,
         candidates: &[(WindowId, CGRect)],
     ) -> Option<WindowId> {
-        if self.dragged_window.is_none() {
-            self.dragged_window = Some(wid);
-            self.drag_origin_frame = Some(new_frame);
-            self.active_candidate = None;
-        } else if self.dragged_window != Some(wid) {
+        if self.dragged_window != Some(wid) {
             self.dragged_window = Some(wid);
             self.drag_origin_frame = Some(new_frame);
             self.active_candidate = None;

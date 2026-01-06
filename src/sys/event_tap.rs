@@ -74,6 +74,10 @@ pub struct EventTap {
 }
 
 impl EventTap {
+    /// # Safety
+    /// This function creates an event tap which requires accessibility permissions.
+    /// The callback must be a valid function pointer and user_info must be valid
+    /// for the lifetime of the event tap unless drop_ctx is provided.
     pub unsafe fn new_with_options(
         options: CGTapOpt,
         mask: CGEventMask,
@@ -131,6 +135,9 @@ impl EventTap {
         Some(event_tap)
     }
 
+    #[allow(clippy::new_ret_no_self)]
+    /// # Safety
+    /// Same requirements as new_with_options, but creates a listen-only tap.
     pub unsafe fn new_listen_only(
         mask: CGEventMask,
         callback: TapCallback,

@@ -683,7 +683,7 @@ impl GroupIndicatorWindow {
             SLWindowContextCreate(
                 *G_CONNECTION,
                 self.cgs_window.id(),
-                ptr::null_mut() as *mut CFType,
+                ptr::null_mut(),
             )
         };
         if ctx.is_null() {

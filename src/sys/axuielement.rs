@@ -115,12 +115,18 @@ impl AXUIElement {
     }
 
     #[inline]
+    /// # Safety
+    /// The caller must ensure `ptr` is a valid pointer to a RawAXUIElement.
+    /// The returned object takes ownership of the reference.
     pub unsafe fn from_get_rule(ptr: *const RawAXUIElement) -> Self {
         let ptr = NonNull::new(ptr.cast_mut()).expect("attempted to create a NULL object");
         let retained = unsafe { CFRetained::retain(ptr) };
         Self::new(retained)
     }
 
+    /// # Safety
+    /// The caller must ensure `ptr` is a valid pointer to a RawAXUIElement.
+    /// The returned object takes ownership of the reference.
     #[inline]
     pub unsafe fn from_create_rule(ptr: *const RawAXUIElement) -> Self {
         let ptr = NonNull::new(ptr.cast_mut()).expect("attempted to create a NULL object");

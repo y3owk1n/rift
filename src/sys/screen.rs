@@ -41,9 +41,9 @@ impl From<SpaceId> for u64 {
     }
 }
 
-impl ToString for SpaceId {
-    fn to_string(&self) -> String {
-        self.get().to_string()
+impl std::fmt::Display for SpaceId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.get())
     }
 }
 
@@ -361,7 +361,7 @@ impl CoordinateConverter {
     }
 
     pub fn from_screen(screen: &NSScreen) -> Option<Self> {
-        let screen_id = screen.get_number().ok()?;
+        let screen_id = screen.get_number()?;
         let bounds = CGDisplayBounds(screen_id.as_u32());
         Some(Self::from_height(bounds.origin.y + bounds.size.height))
     }
@@ -486,7 +486,7 @@ impl System for Actual {
                 Some(NSScreenInfo {
                     frame: s.frame(),
                     visible_frame: s.visibleFrame(),
-                    cg_id: s.get_number().ok()?,
+                    cg_id: s.get_number()?,
                     name: Some(name),
                 })
             })
@@ -501,7 +501,7 @@ impl System for Actual {
         }
 
         for screen in screens {
-            if let Ok(screen_id) = screen.get_number()
+            if let Some(screen_id) = screen.get_number()
                 && screen_id.as_u32() == did {
                     #[allow(deprecated)]
                     let insets = screen.safeAreaInsets();
@@ -528,15 +528,15 @@ impl ScreenId {
 }
 
 pub trait NSScreenExt {
-    fn get_number(&self) -> Result<ScreenId, ()>;
+    fn get_number(&self) -> Option<ScreenId>;
 }
 impl NSScreenExt for NSScreen {
-    fn get_number(&self) -> Result<ScreenId, ()> {
+    fn get_number(&self) -> Option<ScreenId> {
         let desc = self.deviceDescription();
         match desc.objectForKey(ns_string!("NSScreenNumber")) {
             Some(val) if unsafe { msg_send![&*val, isKindOfClass:NSNumber::class() ] } => {
                 let number: &NSNumber = unsafe { std::mem::transmute(val) };
-                Ok(ScreenId(number.as_u32()))
+                Some(ScreenId(number.as_u32()))
             }
             val => {
                 warn!(
@@ -544,7 +544,7 @@ impl NSScreenExt for NSScreen {
                     self.localizedName(),
                     val,
                 );
-                Err(())
+                None
             }
         }
     }

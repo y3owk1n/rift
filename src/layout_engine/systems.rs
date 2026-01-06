@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use enum_dispatch::enum_dispatch;
 use objc2_core_foundation::CGRect;
 use serde::{Deserialize, Serialize};

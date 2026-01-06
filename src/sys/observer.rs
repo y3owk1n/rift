@@ -1,3 +1,5 @@
+#![allow(clippy::new_ret_no_self)]
+
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
@@ -7,7 +9,7 @@ use dispatchr::queue;
 use dispatchr::time::Time;
 use objc2_application_services::{AXError, AXObserver, AXUIElement as RawAXUIElement};
 use objc2_core_foundation::{
-    CFRetained, CFRunLoop, CFRunLoopMode, CFString, kCFRunLoopCommonModes,
+    kCFRunLoopCommonModes, CFRetained, CFRunLoop, CFRunLoopMode, CFString,
 };
 
 use crate::sys::app::pid_t;
@@ -130,11 +132,13 @@ impl Observer {
                 notification,
                 callback: self.callback as *mut c_void,
             });
-            queue::main().after_f(
-                Time::NOW.new_after(10_000_000),
-                Box::into_raw(ctx) as *mut c_void,
-                add_notif_retry,
-            );
+            unsafe {
+                queue::main().after_f(
+                    Time::NOW.new_after(10_000_000),
+                    Box::into_raw(ctx) as *mut c_void,
+                    add_notif_retry,
+                );
+            }
             return Ok(());
         }
         make_result(first)

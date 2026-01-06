@@ -8,6 +8,7 @@ pub struct ProcessInfo {
 }
 
 impl ProcessInfo {
+    #[allow(clippy::field_reassign_with_default)]
     pub fn for_pid(pid: pid_t) -> Result<Self, CGError> {
         let psn = ProcessSerialNumber::for_pid(pid)?;
 
@@ -69,5 +70,5 @@ unsafe extern "C" {
 
     // Deprecated in macOS 10.9.
     fn GetProcessInformation(psn: *const ProcessSerialNumber, info: *mut ProcessInfoRec)
-    -> CGError;
+        -> CGError;
 }

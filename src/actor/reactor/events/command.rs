@@ -189,14 +189,14 @@ impl CommandEventHandler {
 
         if let Some(tx) = &reactor.communication_manager.stack_line_tx
             && let Err(e) = tx.try_send(StackLineEvent::ConfigUpdated(
-                reactor.config_manager.config.clone(),
+                Box::new(reactor.config_manager.config.clone()),
             )) {
                 warn!("Failed to send config update to stack line: {}", e);
             }
 
         if let Some(tx) = &reactor.menu_manager.menu_tx
             && let Err(e) = tx.try_send(menu_bar::Event::ConfigUpdated(
-                reactor.config_manager.config.clone(),
+                Box::new(reactor.config_manager.config.clone()),
             )) {
                 warn!("Failed to send config update to menu bar: {}", e);
             }
@@ -208,7 +208,7 @@ impl CommandEventHandler {
 
         if old_keys != reactor.config_manager.config.keys
             && let Some(wm) = &reactor.communication_manager.wm_sender {
-                wm.send(WmEvent::ConfigUpdated(reactor.config_manager.config.clone()));
+                wm.send(WmEvent::ConfigUpdated(Box::new(reactor.config_manager.config.clone())));
             }
     }
 

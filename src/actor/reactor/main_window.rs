@@ -48,7 +48,7 @@ impl MainWindowTracker {
             }
             Event::ApplicationGloballyActivated(pid) => {
                 self.global_frontmost = Some(pid);
-                let Some(app) = self.apps.get(&pid) else { return None };
+                let app = self.apps.get(&pid)?;
                 (pid, app.frontmost_is_quiet)
             }
             Event::ApplicationGloballyDeactivated(pid) => {
@@ -72,9 +72,7 @@ impl MainWindowTracker {
     }
 
     pub fn main_window(&self) -> Option<WindowId> {
-        let Some(pid) = self.global_frontmost else {
-            return None;
-        };
+        let pid = self.global_frontmost?;
         match self.apps.get(&pid) {
             Some(&AppState {
                 is_frontmost: true,

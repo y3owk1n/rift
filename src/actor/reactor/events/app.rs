@@ -5,9 +5,11 @@ use crate::actor::reactor::{AppState, Event, Reactor};
 use crate::sys::app::WindowInfo;
 use crate::sys::window_server::{self as window_server, WindowServerId, WindowServerInfo};
 
+#[allow(clippy::too_many_arguments)]
 pub struct AppEventHandler;
 
 impl AppEventHandler {
+#[allow(clippy::too_many_arguments)]
     pub fn handle_application_launched(
         reactor: &mut Reactor,
         pid: i32,

@@ -139,7 +139,8 @@ enum WindowCommands {
     /// Resize the selected window by a fractional amount.
     /// - Pass a signed floating value: positive to grow, negative to shrink.
     /// - The value is a fraction of the current size (e.g. `0.05` = 5%).
-    /// Examples:
+    ///
+    ///   Examples:
     ///   rift-cli execute window resize-by --amount 0.05    # grow by 5%
     ///   rift-cli execute window resize-by --amount -0.10   # shrink by 10%
     ResizeBy { amount: f64 },

@@ -592,7 +592,7 @@ fn it_respects_wsid_suppression_for_apply_app_rules() {
         &mut reactor,
         pid,
         app_info.clone(),
-        vec![ws_info.clone()],
+        vec![ws_info],
     );
 
     use super::Reactor;

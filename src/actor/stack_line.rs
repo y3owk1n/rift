@@ -30,7 +30,7 @@ pub enum Event {
         groups: Vec<GroupInfo>,
     },
     ScreenParametersChanged(CoordinateConverter),
-    ConfigUpdated(Config),
+    ConfigUpdated(Box<Config>),
 }
 
 pub struct StackLine {
@@ -146,9 +146,9 @@ impl StackLine {
         tracing::debug!("Updated coordinate converter for group indicators");
     }
 
-    fn handle_config_updated(&mut self, config: Config) {
+    fn handle_config_updated(&mut self, config: Box<Config>) {
         let old_enabled = self.is_enabled();
-        self.config = config;
+        self.config = *config;
         let new_enabled = self.is_enabled();
 
         if old_enabled && !new_enabled {
@@ -332,9 +332,9 @@ mod tests {
 
     #[test]
     fn test_group_info_fields() {
-        assert_eq!(LayoutKind::VerticalStack.is_group(), true);
-        assert_eq!(LayoutKind::HorizontalStack.is_group(), true);
-        assert_eq!(LayoutKind::Horizontal.is_group(), false);
+        assert!(LayoutKind::VerticalStack.is_group());
+        assert!(LayoutKind::HorizontalStack.is_group());
+        assert!(!LayoutKind::Horizontal.is_group());
     }
 
     #[test]

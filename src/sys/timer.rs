@@ -85,6 +85,8 @@
 //! }
 //! ```
 
+#![allow(clippy::arc_with_non_send_sync)]
+
 use std::ffi::c_void;
 use std::future::Future;
 use std::pin::Pin;
@@ -300,6 +302,7 @@ impl Timer {
     }
 
     /// Convenience method to get the next timer event.
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> impl Future<Output = Option<()>> {
         tokio_stream::StreamExt::next(self)
     }

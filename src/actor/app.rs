@@ -879,42 +879,45 @@ impl State {
 
         check_cancel()?;
 
-        let mut this = this_ref.borrow_mut();
+        let needs_activation = {
+            let this = this_ref.borrow_mut();
 
-        let is_frontmost = trace("is_frontmost", &this.app, || this.app.frontmost())?;
+            let is_frontmost = trace("is_frontmost", &this.app, || this.app.frontmost())?;
 
-        let make_key_result = window_server::make_key_window(
-            this.pid,
-            WindowServerId::try_from(&this.window(first)?.elem)?,
-        );
-        if make_key_result.is_err() {
-            warn!(?this.pid, "Failed to activate app");
-        }
+            let make_key_result = window_server::make_key_window(
+                this.pid,
+                WindowServerId::try_from(&this.window(first)?.elem)?,
+            );
+            if make_key_result.is_err() {
+                warn!(?this.pid, "Failed to activate app");
+            }
 
-        if !is_frontmost && make_key_result.is_ok() && is_standard {
+            !is_frontmost && make_key_result.is_ok() && is_standard
+        };
+
+        if needs_activation {
             let (tx, rx) = continuation();
             let (quiet_activation, quiet_window_change);
             if wids.len() == 1 {
-                // `quiet` only applies if the first window is also the last.
                 quiet_activation = quiet;
                 quiet_window_change = (quiet == Quiet::Yes).then_some(first);
             } else {
-                // Windows before the last are always quiet.
                 quiet_activation = Quiet::Yes;
                 quiet_window_change = Some(first);
             }
-            // this.last_activated = Some((Instant::now(), quiet_activation, quiet_window_change, tx));
 
-            if let Some((_, _, _, prev_tx)) = this.last_activated.replace((
-                Instant::now(),
-                quiet_activation,
-                quiet_window_change,
-                tx,
-            )) {
-                prev_tx.send(());
+            {
+                let mut this = this_ref.borrow_mut();
+                if let Some((_, _, _, prev_tx)) = this.last_activated.replace((
+                    Instant::now(),
+                    quiet_activation,
+                    quiet_window_change,
+                    tx,
+                )) {
+                    prev_tx.send(());
+                }
             }
 
-            drop(this);
             trace!("Awaiting activation");
             select! {
                 _ = rx => {}
@@ -924,13 +927,13 @@ impl State {
                 }
             }
             trace!("Activation complete");
-            this = this_ref.borrow_mut();
         } else {
             trace!(
-                "Not awaiting activation event. is_frontmost={is_frontmost:?} \
-                make_key_result={make_key_result:?} is_standard={is_standard:?}"
+                "Not awaiting activation event. is_standard={is_standard:?}"
             )
         }
+
+        let mut this = this_ref.borrow_mut();
 
         for (i, &wid) in wids.iter().enumerate() {
             debug_assert_eq!(wid.pid, this.pid);

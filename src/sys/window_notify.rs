@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types)]
+#![allow(non_camel_case_types, clippy::type_complexity)]
 
 // based on https://github.com/koekeishiya/yabai/commit/6f9006dd957100ec13096d187a8865e85a164a9b#r148091577
 // seems like macOS Sequoia does not send destroyed events from windows that are before the process is created
@@ -13,8 +13,8 @@ use parking_lot::Mutex;
 use tracing::{debug, trace};
 
 use super::skylight::{
-    CGSEventType, SLSMainConnectionID, SLSRegisterConnectionNotifyProc,
-    SLSRequestNotificationsForWindows, cid_t,
+    cid_t, CGSEventType, SLSMainConnectionID, SLSRegisterConnectionNotifyProc,
+    SLSRequestNotificationsForWindows,
 };
 use crate::actor;
 use crate::common::collections::{HashMap, HashSet};

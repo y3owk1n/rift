@@ -20,7 +20,7 @@ pub struct Update {
 
 pub enum Event {
     Update(Update),
-    ConfigUpdated(Config),
+    ConfigUpdated(Box<Config>),
 }
 
 pub struct Menu {
@@ -127,10 +127,10 @@ impl Menu {
         );
     }
 
-    fn handle_config_updated(&mut self, new_config: Config) {
+    fn handle_config_updated(&mut self, new_config: Box<Config>) {
         let should_enable = new_config.settings.ui.menu_bar.enabled;
 
-        self.config = new_config;
+        self.config = *new_config;
 
         if should_enable && self.icon.is_none() {
             self.icon = Some(MenuIcon::new(self.mtm));

@@ -1,4 +1,4 @@
-use std::ffi::{CString, c_void};
+use std::ffi::{c_void, CString};
 use std::ops::Deref;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -10,12 +10,12 @@ use dispatchr::qos::QoS;
 use dispatchr::queue;
 use dispatchr::queue::Unmanaged;
 use dispatchr::semaphore::Managed;
-use dispatchr::source::{Managed as DSource, dispatch_source_type_t as DSrcTy};
+use dispatchr::source::{dispatch_source_type_t as DSrcTy, Managed as DSource};
 use dispatchr::time::Time;
-use futures_task::{ArcWake, waker};
+use futures_task::{waker, ArcWake};
 use nix::errno::Errno;
 use nix::libc::pid_t;
-use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
+use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
 use nix::unistd::Pid;
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
@@ -38,8 +38,8 @@ impl Drop for NamedQueueHandle {
     }
 }
 
-static NAMED_QUEUES: OnceCell<Mutex<Vec<Box<NamedQueueHandle>>>> = OnceCell::new();
-fn named_queue_registry() -> &'static Mutex<Vec<Box<NamedQueueHandle>>> {
+static NAMED_QUEUES: OnceCell<Mutex<Vec<NamedQueueHandle>>> = OnceCell::new();
+fn named_queue_registry() -> &'static Mutex<Vec<NamedQueueHandle>> {
     NAMED_QUEUES.get_or_init(|| Mutex::new(Vec::new()))
 }
 
@@ -56,9 +56,7 @@ impl NamedQueueExt for Unmanaged {
         }
 
         let queue_ref = unsafe { &*queue };
-        named_queue_registry()
-            .lock()
-            .push(Box::new(NamedQueueHandle { queue, _label: cname }));
+        named_queue_registry().lock().push(NamedQueueHandle { queue, _label: cname });
         Some(queue_ref)
     }
 }
@@ -94,6 +92,8 @@ unsafe extern "C" {
 #[inline]
 fn dispatch_source_type_proc() -> DSrcTy {
     // SAFETY: dispatchr::source::dispatch_source_type_t is repr(transparent) over a pointer
+    #[allow(clippy::unnecessary_cast)]
+    // SAFETY: dispatchr::source::dispatch_source_type_t is repr(transparent) over a pointer
     unsafe {
         let p = &_dispatch_source_type_proc as *const _ as *const c_void;
         std::mem::transmute::<*const c_void, DSrcTy>(p)
@@ -101,32 +101,42 @@ fn dispatch_source_type_proc() -> DSrcTy {
 }
 
 pub trait DispatchExt {
-    fn after_f(&self, when: Time, context: *mut c_void, work: extern "C" fn(*mut c_void));
-    fn after_f_s<T>(&self, when: Time, context: T, work: fn(T));
-    fn set_context(&self, context: *mut c_void);
-    fn set_timer(&self, start: Time, interval: i64, leeway: i64);
+    /// # Safety
+    /// The caller must ensure the parameters are valid for the dispatch_after_f FFI call.
+    unsafe fn after_f(&self, when: Time, context: *mut c_void, work: extern "C" fn(*mut c_void));
+    /// # Safety
+    /// The caller must ensure the parameters are valid for the dispatch_after_f FFI call.
+    unsafe fn after_f_s<T>(&self, when: Time, context: T, work: fn(T));
+    /// # Safety
+    /// The caller must ensure the context pointer is valid.
+    unsafe fn set_context(&self, context: *mut c_void);
+    /// # Safety
+    /// The caller must ensure the parameters are valid for the dispatch_source_set_timer FFI call.
+    unsafe fn set_timer(&self, start: Time, interval: i64, leeway: i64);
 }
 
 impl DispatchExt for Unmanaged {
-    fn after_f(&self, when: Time, context: *mut c_void, work: extern "C" fn(*mut c_void)) {
+    unsafe fn after_f(&self, when: Time, context: *mut c_void, work: extern "C" fn(*mut c_void)) {
         unsafe { dispatch_after_f(when, self, context, work) }
     }
 
-    fn after_f_s<T>(&self, when: Time, context: T, work: fn(T)) {
+    unsafe fn after_f_s<T>(&self, when: Time, context: T, work: fn(T)) {
         extern "C" fn trampoline<T>(ctx: *mut c_void) {
             let ctx = unsafe { Box::from_raw(ctx as *mut (T, fn(T))) };
             let (context, work) = *ctx;
             work(context);
         }
         let ctx = Box::into_raw(Box::new((context, work))) as *mut c_void;
-        self.after_f(when, ctx, trampoline::<T>);
+        unsafe {
+            self.after_f(when, ctx, trampoline::<T>);
+        }
     }
 
-    fn set_context(&self, context: *mut c_void) {
+    unsafe fn set_context(&self, context: *mut c_void) {
         unsafe { dispatch_set_context(self as *const _ as *mut c_void, context) }
     }
 
-    fn set_timer(&self, start: Time, interval: i64, leeway: i64) {
+    unsafe fn set_timer(&self, start: Time, interval: i64, leeway: i64) {
         unsafe {
             dispatch_source_set_timer(self as *const _ as *mut c_void, start, interval, leeway)
         }
@@ -134,27 +144,29 @@ impl DispatchExt for Unmanaged {
 }
 
 impl DispatchExt for DSource {
-    fn after_f(&self, when: Time, context: *mut c_void, work: extern "C" fn(*mut c_void)) {
+    unsafe fn after_f(&self, when: Time, context: *mut c_void, work: extern "C" fn(*mut c_void)) {
         unsafe {
             dispatch_after_f(when, self.deref() as *const _ as *const Unmanaged, context, work)
         }
     }
 
-    fn after_f_s<T>(&self, when: Time, context: T, work: fn(T)) {
+    unsafe fn after_f_s<T>(&self, when: Time, context: T, work: fn(T)) {
         extern "C" fn trampoline<T>(ctx: *mut c_void) {
             let ctx = unsafe { Box::from_raw(ctx as *mut (T, fn(T))) };
             let (context, work) = *ctx;
             work(context);
         }
         let ctx = Box::into_raw(Box::new((context, work))) as *mut c_void;
-        self.after_f(when, ctx, trampoline::<T>);
+        unsafe {
+            self.after_f(when, ctx, trampoline::<T>);
+        }
     }
 
-    fn set_context(&self, context: *mut c_void) {
+    unsafe fn set_context(&self, context: *mut c_void) {
         unsafe { dispatch_set_context(self.deref() as *const _ as *mut c_void, context) }
     }
 
-    fn set_timer(&self, start: Time, interval: i64, leeway: i64) {
+    unsafe fn set_timer(&self, start: Time, interval: i64, leeway: i64) {
         unsafe {
             dispatch_source_set_timer(
                 self.deref() as *const _ as *mut c_void,
@@ -230,7 +242,9 @@ pub fn reap_on_exit_proc(pid: pid_t) {
         }
     }
 
-    src.set_context(ctx);
+    unsafe {
+        src.set_context(ctx);
+    }
     src.set_event_handler_f(proc_event_handler);
     src.resume();
     sources_map().lock().insert(pid, src);

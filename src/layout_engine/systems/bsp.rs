@@ -221,11 +221,10 @@ impl BspLayoutSystem {
 
     fn collect_windows_under(&self, node: NodeId, out: &mut Vec<WindowId>) {
         match self.kind.get(node) {
-            Some(NodeKind::Leaf { window, .. }) => {
-                if let Some(w) = window {
-                    out.push(*w);
-                }
+            Some(NodeKind::Leaf { window: Some(w), .. }) => {
+                out.push(*w);
             }
+            Some(NodeKind::Leaf { window: None, .. }) => {}
             Some(NodeKind::Split { .. }) => {
                 for child in node.children(&self.tree.map) {
                     self.collect_windows_under(child, out);
@@ -400,22 +399,26 @@ impl BspLayoutSystem {
     ) {
         match self.kind.get(node) {
             Some(NodeKind::Leaf {
-                window,
+                window: Some(w),
                 fullscreen,
                 fullscreen_within_gaps,
                 ..
             }) => {
-                if let Some(w) = window {
-                    let target = if *fullscreen {
-                        screen
-                    } else if *fullscreen_within_gaps {
-                        Self::apply_outer_gaps(screen, gaps)
-                    } else {
-                        rect
-                    };
-                    out.push((*w, target));
-                }
+                let target = if *fullscreen {
+                    screen
+                } else if *fullscreen_within_gaps {
+                    Self::apply_outer_gaps(screen, gaps)
+                } else {
+                    rect
+                };
+                out.push((*w, target));
             }
+            Some(NodeKind::Leaf {
+                window: None,
+                fullscreen: _,
+                fullscreen_within_gaps: _,
+                ..
+            }) => {}
             Some(NodeKind::Split { orientation, ratio }) => match orientation {
                 Orientation::Horizontal => {
                     let gap = gaps.inner.horizontal;
@@ -506,6 +509,7 @@ impl Components {
     }
 }
 
+#[allow(clippy::items_after_test_module)]
 #[cfg(test)]
 mod tests {
     use super::*;

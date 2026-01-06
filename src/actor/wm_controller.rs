@@ -49,7 +49,7 @@ pub enum WmEvent {
     ScreenParametersChanged(Vec<ScreenDescriptor>, CoordinateConverter, Vec<Option<SpaceId>>),
     SystemWoke,
     PowerStateChanged(bool),
-    ConfigUpdated(crate::common::config::Config),
+    ConfigUpdated(Box<crate::common::config::Config>),
     Command(WmCommand),
 }
 
@@ -235,26 +235,26 @@ impl WmController {
 
                 let sender = self.sender.clone();
                 let event_tap_tx = self.event_tap_tx.clone();
-                queue::main().after_f_s(
+                unsafe { queue::main().after_f_s(
                     Time::new_after(Time::NOW, 250 * 1000000),
                     (sender, WmEvent::DiscoverRunningApps),
                     |(sender, event)| sender.send(event),
-                );
+                ) };
 
-                queue::main().after_f_s(
+                unsafe { queue::main().after_f_s(
                     Time::new_after(Time::NOW, (250 + 350) * 1000000),
                     (event_tap_tx, event_tap::Request::SetEventProcessing(true)),
                     |(sender, event)| sender.send(event),
-                );
+                ) };
             }
             DiscoverRunningApps => {
                 if !self.screen_params_received {
                     let sender = self.sender.clone();
-                    queue::main().after_f_s(
+                    unsafe { queue::main().after_f_s(
                         Time::new_after(Time::NOW, 200 * 1000000),
                         (sender, WmEvent::DiscoverRunningApps),
                         |(sender, event)| sender.send(event),
-                    );
+                    ) };
                     return;
                 }
                 for (pid, info) in sys::app::running_apps(None) {
@@ -310,7 +310,7 @@ impl WmController {
             ConfigUpdated(new_cfg) => {
                 let old_keys_ser = serde_json::to_string(&self.config.config.keys).ok();
 
-                self.config.config = new_cfg;
+                self.config.config = *new_cfg;
 
                 if let Some(old_ser) = old_keys_ser {
                     if serde_json::to_string(&self.config.config.keys).ok().as_deref()
@@ -646,7 +646,7 @@ impl WmController {
             }
 
         let screen = NSScreen::mainScreen(self.mtm)?;
-        let number = screen.get_number().ok()?;
+        let number = screen.get_number()?;
         *self.cur_screen_id.iter().zip(&self.cur_space).find(|(id, _)| **id == number)?.1
     }
 

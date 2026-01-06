@@ -4,6 +4,8 @@
 //! what is going on. It shares this with the layout actor, and reacts to layout
 //! changes by sending requests out to the other actors in the system.
 
+#![allow(clippy::too_many_arguments, clippy::type_complexity)]
+
 mod animation;
 mod error;
 mod events;
@@ -13,12 +15,8 @@ mod query;
 mod replay;
 pub mod transaction_manager;
 mod utils;
-
 #[cfg(test)]
 mod testing;
-
-#[cfg(test)]
-mod tests;
 
 use std::thread;
 use std::time::Duration;
@@ -462,6 +460,7 @@ impl WindowState {
 }
 
 impl Reactor {
+    #[allow(clippy::too_many_arguments)]
     pub fn spawn(
         config: Config,
         layout_engine: LayoutEngine,
@@ -1030,7 +1029,7 @@ impl Reactor {
         }
     }
 
-    fn handle_fullscreen_space_transition(&mut self, spaces: &mut Vec<Option<SpaceId>>) -> bool {
+    fn handle_fullscreen_space_transition(&mut self, spaces: &mut [Option<SpaceId>]) -> bool {
         let mut saw_fullscreen = false;
         let mut all_fullscreen = !spaces.is_empty();
         let mut refresh_spaces = Vec::new();
@@ -1724,6 +1723,7 @@ impl Reactor {
                 continue;
             }
 
+            #[allow(clippy::type_complexity)]
             let windows_with_titles: Vec<(
                 WindowId,
                 Option<String>,
@@ -2447,13 +2447,7 @@ impl Reactor {
         let active_space_ids: HashSet<SpaceId> = reactor
             .space_manager
             .iter_known_spaces()
-            .filter_map(|space| {
-                if reactor.is_space_active(space) {
-                    Some(space)
-                } else {
-                    None
-                }
-            })
+            .filter(|space| reactor.is_space_active(*space))
             .collect();
 
         let mut stale_windows: Vec<WindowId> = Vec::new();

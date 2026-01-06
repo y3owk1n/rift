@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use objc2_core_foundation::CGRect;
 
 use crate::actor::app::WindowId;

@@ -328,14 +328,14 @@ impl NotificationCenterInner {
         }
 
         let handler_ptr = self as *const _ as *mut Self;
-        queue::main().after_f_s(
+        unsafe { queue::main().after_f_s(
             Time::new_after(Time::NOW, delay_ns),
             (handler_ptr, attempt),
-            |(handler_ptr, attempt)| unsafe {
+            |(handler_ptr, attempt)| {
                 let handler = &*handler_ptr;
                 handler.process_screen_refresh(attempt, true);
             },
-        );
+        ) };
     }
 
     fn needs_refresh_for_flags(flags: DisplayReconfigFlags) -> bool {
@@ -364,14 +364,14 @@ impl NotificationCenterInner {
         let handler_ptr = user_info as *mut NotificationCenterInner;
         let parsed = DisplayReconfigFlags::from_bits_truncate(flags);
         let normalized = NotificationCenterInner::normalize_display_flags(parsed, _display);
-        queue::main().after_f_s(
+        unsafe { queue::main().after_f_s(
             Time::NOW,
             (handler_ptr, normalized),
-            |(handler_ptr, flags)| unsafe {
+            |(handler_ptr, flags)| {
                 let handler = &*handler_ptr;
                 handler.handle_display_reconfig(flags);
             },
-        );
+        ) };
     }
 
     /// Normalize conflicting CGDisplay flags to a single add/remove decision, following

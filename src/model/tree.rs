@@ -751,10 +751,10 @@ mod tests {
 
     impl Drop for TestTree {
         fn drop(&mut self) {
-            if !self.root_node.0.is_none() {
+            if self.root_node.0.is_some() {
                 self.root_node.remove(&mut self.tree);
             }
-            if !self.other_root_node.0.is_none() {
+            if self.other_root_node.0.is_some() {
                 self.other_root_node.remove(&mut self.tree);
             }
         }

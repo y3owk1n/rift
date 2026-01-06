@@ -265,7 +265,6 @@ mod bsp_layout_edge_cases {
             let _ = system.move_focus(layout, Direction::Up);
             let _ = system.move_focus(layout, Direction::Down);
 
-            assert!(true);
         }
 
         #[test]
@@ -318,7 +317,6 @@ mod bsp_layout_edge_cases {
             system.toggle_tile_orientation(layout);
 
             let (_, _raise) = system.move_focus(layout, Direction::Down);
-            assert!(true);
         }
     }
 
@@ -336,7 +334,6 @@ mod bsp_layout_edge_cases {
             system.resize_selection_by(layout, 0.1);
             system.resize_selection_by(layout, -0.05);
 
-            assert!(true);
         }
 
         #[test]
@@ -349,7 +346,6 @@ mod bsp_layout_edge_cases {
             system.resize_selection_by(layout, 0.1);
             system.resize_selection_by(layout, -0.1);
 
-            assert!(true);
         }
 
         #[test]
@@ -367,7 +363,6 @@ mod bsp_layout_edge_cases {
                 system.resize_selection_by(layout, -0.1);
             }
 
-            assert!(true);
         }
     }
 
@@ -436,7 +431,6 @@ mod bsp_layout_edge_cases {
             system.toggle_tile_orientation(layout);
             system.toggle_tile_orientation(layout);
 
-            assert!(true);
         }
 
         #[test]
@@ -859,7 +853,6 @@ mod traditional_layout_edge_cases {
             let _ = system.move_focus(layout, Direction::Up);
             let _ = system.move_focus(layout, Direction::Down);
 
-            assert!(true);
         }
 
         #[test]
@@ -964,7 +957,6 @@ mod traditional_layout_edge_cases {
             system.toggle_tile_orientation(layout);
             system.toggle_tile_orientation(layout);
 
-            assert!(true);
         }
     }
 
@@ -982,7 +974,6 @@ mod traditional_layout_edge_cases {
             system.resize_selection_by(layout, 0.1);
             system.resize_selection_by(layout, -0.05);
 
-            assert!(true);
         }
 
         #[test]
@@ -1000,7 +991,6 @@ mod traditional_layout_edge_cases {
                 system.resize_selection_by(layout, -0.1);
             }
 
-            assert!(true);
         }
     }
 
@@ -1122,7 +1112,6 @@ mod traditional_layout_edge_cases {
 
             system.rebalance(layout);
 
-            assert!(true);
         }
     }
 
@@ -1143,7 +1132,6 @@ mod traditional_layout_edge_cases {
             let _ = system.move_selection(layout, Direction::Up);
             let _ = system.move_selection(layout, Direction::Down);
 
-            assert!(true);
         }
 
         #[test]
@@ -1170,7 +1158,6 @@ mod traditional_layout_edge_cases {
             assert!(initial.is_some());
 
             system.ascend_selection(layout);
-            assert!(true);
         }
 
         #[test]
@@ -1204,7 +1191,6 @@ mod traditional_layout_edge_cases {
             system.add_window_after_selection(layout, w(1, 1));
             system.split_selection(layout, LayoutKind::Horizontal);
 
-            assert!(true);
         }
 
         #[test]
@@ -1215,7 +1201,6 @@ mod traditional_layout_edge_cases {
             system.add_window_after_selection(layout, w(1, 1));
             system.split_selection(layout, LayoutKind::Vertical);
 
-            assert!(true);
         }
     }
 
@@ -1290,7 +1275,6 @@ mod traditional_layout_edge_cases {
 
             system.unjoin_selection(layout);
 
-            assert!(true);
         }
     }
 
@@ -1308,7 +1292,6 @@ mod traditional_layout_edge_cases {
 
             system.join_selection_with_direction(layout, Direction::Right);
 
-            assert!(true);
         }
     }
 }
@@ -1372,7 +1355,6 @@ mod layout_system_common {
 
             bsp.remove_layout(layout);
 
-            assert!(true);
         }
     }
 
@@ -1477,7 +1459,7 @@ mod layout_system_common {
             let visible2 = system.visible_windows_in_layout(layout2);
 
             assert!(visible1.is_empty() || visible1.len() < 2);
-            assert!(visible2.len() >= 1);
+            assert!(!visible2.is_empty());
         }
 
         #[test]
@@ -1495,7 +1477,7 @@ mod layout_system_common {
             let visible2 = system.visible_windows_in_layout(layout2);
 
             assert!(visible1.is_empty() || visible1.len() < 2);
-            assert!(visible2.len() >= 1);
+            assert!(!visible2.is_empty());
         }
     }
 }

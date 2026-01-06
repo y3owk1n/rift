@@ -108,7 +108,7 @@ impl SwipeConfig {
         } else if g.swipe_vertical_tolerance > 100.0 {
             1.0
         } else {
-            g.swipe_vertical_tolerance.max(0.0).min(1.0)
+            g.swipe_vertical_tolerance.clamp(0.0, 1.0)
         };
         SwipeConfig {
             enabled: g.enabled,

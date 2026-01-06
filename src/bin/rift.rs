@@ -145,7 +145,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
         }
         Err(_) => {
             println!("No config file found, using default configuration");
-            Config::default().expect("Failed to parse embedded default config - this is a bug")
+            Config::default_config().expect("Failed to parse embedded default config - this is a bug")
         }
     };
     config.settings.animate &= !opt.no_animate;
@@ -246,16 +246,9 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
     std::thread::spawn(move || {
         let mut rx = mach_bridge_rx;
         let server_state = server_state_for_bridge;
-        loop {
-            match rx.blocking_recv() {
-                Some((_span, event)) => {
-                    let state = server_state.read();
-                    state.publish(event);
-                }
-                None => {
-                    break;
-                }
-            }
+        while let Some((_span, event)) = rx.blocking_recv() {
+            let state = server_state.read();
+            state.publish(event);
         }
     });
 

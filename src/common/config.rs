@@ -882,7 +882,7 @@ impl Config {
         Self::parse(&buf)
     }
 
-    pub fn default() -> anyhow::Result<Config> {
+    pub fn default_config() -> anyhow::Result<Config> {
         Self::parse(include_str!("../../rift.default.toml"))
     }
 
@@ -986,11 +986,11 @@ impl Config {
         let a_chars: Vec<char> = a.chars().collect();
         let b_chars: Vec<char> = b.chars().collect();
         let mut d = vec![vec![0usize; b_chars.len() + 1]; a_chars.len() + 1];
-        for i in 0..=a_chars.len() {
-            d[i][0] = i;
+        for (i, item) in d.iter_mut().enumerate().take(a_chars.len() + 1) {
+            item[0] = i;
         }
-        for j in 0..=b_chars.len() {
-            d[0][j] = j;
+        for (j, item) in d[0].iter_mut().enumerate().take(b_chars.len() + 1) {
+            *item = j;
         }
         for i in 1..=a_chars.len() {
             for j in 1..=b_chars.len() {
@@ -1240,8 +1240,7 @@ mod tests {
 
     #[test]
     fn test_workspace_settings_validation_empty_workspace_count() {
-        let mut settings = VirtualWorkspaceSettings::default();
-        settings.default_workspace_count = 0;
+        let settings = VirtualWorkspaceSettings { default_workspace_count: 0, ..Default::default() };
         let issues = settings.validate();
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|i| i.contains("default_workspace_count must be at least 1")));
@@ -1249,8 +1248,7 @@ mod tests {
 
     #[test]
     fn test_workspace_settings_validation_excessive_workspaces() {
-        let mut settings = VirtualWorkspaceSettings::default();
-        settings.default_workspace_count = 100;
+        let settings = VirtualWorkspaceSettings { default_workspace_count: 100, ..Default::default() };
         let issues = settings.validate();
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|i| i.contains("should not exceed")));
@@ -1258,22 +1256,26 @@ mod tests {
 
     #[test]
     fn test_workspace_settings_validation_too_many_names() {
-        let mut settings = VirtualWorkspaceSettings::default();
-        settings.workspace_names = vec![
-            "1".to_string(),
-            "2".to_string(),
-            "3".to_string(),
-            "4".to_string(),
-            "5".to_string(),
-        ];
+        let settings = VirtualWorkspaceSettings {
+            workspace_names: vec![
+                "1".to_string(),
+                "2".to_string(),
+                "3".to_string(),
+                "4".to_string(),
+                "5".to_string(),
+            ],
+            ..Default::default()
+        };
         let issues = settings.validate();
         assert!(issues.iter().any(|i| i.contains("More workspace names provided")));
     }
 
     #[test]
     fn test_workspace_settings_validation_default_out_of_bounds() {
-        let mut settings = VirtualWorkspaceSettings::default();
-        settings.default_workspace = 5;
+        let settings = VirtualWorkspaceSettings {
+            default_workspace: 5,
+            ..Default::default()
+        };
         let issues = settings.validate();
         assert!(issues.iter().any(|i| i.contains("default_workspace")));
     }
@@ -1370,16 +1372,14 @@ mod tests {
 
     #[test]
     fn test_settings_validation_negative_animation_duration() {
-        let mut settings = Settings::default();
-        settings.animation_duration = -1.0;
+        let settings = Settings { animation_duration: -1.0, ..Default::default() };
         let issues = settings.validate();
         assert!(issues.iter().any(|i| i.contains("animation_duration must be non-negative")));
     }
 
     #[test]
     fn test_settings_validation_zero_animation_fps() {
-        let mut settings = Settings::default();
-        settings.animation_fps = 0.0;
+        let settings = Settings { animation_fps: 0.0, ..Default::default() };
         let issues = settings.validate();
         assert!(issues.iter().any(|i| i.contains("animation_fps must be positive")));
     }
@@ -1398,28 +1398,21 @@ mod tests {
 
     #[test]
     fn test_stack_settings_validation_negative_offset() {
-        let mut stack = StackSettings::default();
-        stack.stack_offset = -5.0;
+        let stack = StackSettings { stack_offset: -5.0, ..Default::default() };
         let issues = stack.validate();
         assert!(issues.iter().any(|i| i.contains("stack_offset must be non-negative")));
     }
 
     #[test]
     fn test_outer_gaps_validation_negative_values() {
-        let mut gaps = OuterGaps::default();
-        gaps.top = -1.0;
-        gaps.left = -2.0;
-        gaps.bottom = -3.0;
-        gaps.right = -4.0;
+        let gaps = OuterGaps { top: -1.0, left: -2.0, bottom: -3.0, right: -4.0 };
         let issues = gaps.validate();
         assert_eq!(4, issues.len());
     }
 
     #[test]
     fn test_inner_gaps_validation_negative_values() {
-        let mut gaps = InnerGaps::default();
-        gaps.horizontal = -1.0;
-        gaps.vertical = -2.0;
+        let gaps = InnerGaps { horizontal: -1.0, vertical: -2.0 };
         let issues = gaps.validate();
         assert_eq!(2, issues.len());
     }
@@ -1468,7 +1461,7 @@ mod tests {
     #[test]
     fn test_config_validate_empty_is_valid() {
         let config =
-            Config::default().expect("Failed to parse embedded default config - this is a bug");
+            Config::default_config().expect("Failed to parse embedded default config - this is a bug");
         let issues = config.validate();
         assert!(issues.is_empty(), "Expected no issues, got: {:?}", issues);
     }

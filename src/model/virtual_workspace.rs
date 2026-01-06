@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -170,8 +172,7 @@ impl VirtualWorkspaceManager {
     }
 
     pub fn new_with_rules(app_rules: Vec<AppWorkspaceRule>) -> Self {
-        let mut cfg = VirtualWorkspaceSettings::default();
-        cfg.app_rules = app_rules;
+        let cfg = VirtualWorkspaceSettings { app_rules, ..Default::default() };
         Self::new_with_config(&cfg)
     }
 
@@ -558,19 +559,11 @@ impl VirtualWorkspaceManager {
                 });
 
             if let Some((existing_space, old_workspace_id)) = existing_mapping {
-                if existing_space != space {
-                    if let Some(old_workspace) = self.workspaces.get_mut(old_workspace_id) {
-                        old_workspace.remove_window(window_id);
-                    }
-                    self.window_to_workspace.remove(&(existing_space, window_id));
-                    self.window_rule_floating.remove(&(existing_space, window_id));
-                } else {
-                    if let Some(old_workspace) = self.workspaces.get_mut(old_workspace_id) {
-                        old_workspace.remove_window(window_id);
-                    }
-                    self.window_to_workspace.remove(&(existing_space, window_id));
-                    self.window_rule_floating.remove(&(existing_space, window_id));
+                if let Some(old_workspace) = self.workspaces.get_mut(old_workspace_id) {
+                    old_workspace.remove_window(window_id);
                 }
+                self.window_to_workspace.remove(&(existing_space, window_id));
+                self.window_rule_floating.remove(&(existing_space, window_id));
             }
 
             if let Some(workspace) = self.workspaces.get_mut(workspace_id) {
@@ -1504,9 +1497,11 @@ mod tests {
 
     #[test]
     fn default_workspace_setting_applied() {
-        let mut settings = VirtualWorkspaceSettings::default();
-        settings.default_workspace_count = 5;
-        settings.default_workspace = 3;
+        let settings = VirtualWorkspaceSettings {
+            default_workspace_count: 5,
+            default_workspace: 3,
+            ..Default::default()
+        };
 
         let mut manager = VirtualWorkspaceManager::new_with_config(&settings);
 
@@ -1765,7 +1760,7 @@ mod tests {
             None,
         )
         .workspace_id;
-        let expected_pref = manager.list_workspaces(space1).get(0).unwrap().0;
+        let expected_pref = manager.list_workspaces(space1).first().unwrap().0;
         let expected_dialog = manager.list_workspaces(space1).get(2).unwrap().0;
         assert_eq!(ws_pref, expected_pref);
         assert_eq!(ws_dialog, expected_dialog);
@@ -2071,18 +2066,20 @@ mod tests {
 
     #[test]
     fn test_target_workspace_for_app_info() {
-        let mut settings = VirtualWorkspaceSettings::default();
-        settings.app_rules = vec![AppWorkspaceRule {
-            app_id: Some("com.example.specific".to_string()),
-            workspace: Some(WorkspaceSelector::Index(2)),
-            floating: false,
-            manage: true,
-            app_name: None,
-            title_regex: None,
-            title_substring: None,
-            ax_role: None,
-            ax_subrole: None,
-        }];
+        let settings = VirtualWorkspaceSettings {
+            app_rules: vec![AppWorkspaceRule {
+                app_id: Some("com.example.specific".to_string()),
+                workspace: Some(WorkspaceSelector::Index(2)),
+                floating: false,
+                manage: true,
+                app_name: None,
+                title_regex: None,
+                title_substring: None,
+                ax_role: None,
+                ax_subrole: None,
+            }],
+            ..Default::default()
+        };
         let mut manager = VirtualWorkspaceManager::new_with_config(&settings);
         let space = SpaceId::new(1);
 

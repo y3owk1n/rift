@@ -725,7 +725,7 @@ pub unsafe fn send_mach_reply(
 
     copy_nonoverlapping(
         response_data as *const u8,
-        reply.data.as_mut_ptr() as *mut u8,
+        reply.data.as_mut_ptr(),
         response_len as usize,
     );
     if aligned_len > response_len {

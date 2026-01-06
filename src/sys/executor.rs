@@ -181,7 +181,7 @@ mod tests {
         });
 
         assert!(result.is_err());
-        assert_eq!(true, dropped.take());
+        assert!(dropped.take());
     }
 
     #[test]

@@ -48,9 +48,9 @@ impl NativeMissionControl {
         info!("Starting native mission-control monitor (must run on main thread)");
         self.observe();
 
-        while let Some((_span, req)) = self.rx.recv().await {
+        if let Some((_span, req)) = self.rx.recv().await {
             match req {
-                Request::Stop => break,
+                Request::Stop => {}
             }
         }
 

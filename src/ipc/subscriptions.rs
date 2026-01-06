@@ -240,11 +240,11 @@ impl ServerState {
 
 fn schedule_event_send(client_port: ClientPort, event_json: String) {
     match queue::global(dispatchr::QoS::Utility) {
-        Some(q) => q.after_f_s(
+        Some(q) => unsafe { q.after_f_s(
             Time::new_after(Time::NOW, (0.1 * 1000000.0) as i64),
             (client_port, event_json),
             |(client_port, event_json)| ServerState::send_event_to_client(client_port, &event_json),
-        ),
+        ) },
         None => ServerState::send_event_to_client(client_port, &event_json),
     }
 }

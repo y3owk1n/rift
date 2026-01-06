@@ -3,7 +3,7 @@ use dispatchr::time::Time;
 use std::num::NonZeroU32;
 use tracing::{debug, warn};
 
-use crate::actor::app::{WindowId, pid_t};
+use crate::actor::app::{pid_t, WindowId};
 use crate::actor::raise_manager;
 use crate::actor::reactor::{MenuState, Reactor};
 use crate::actor::wm_controller::Sender as WmSender;
@@ -43,10 +43,11 @@ impl SystemEventHandler {
         debug!("[WAKE] system woke from sleep");
 
         let reactor_ptr = reactor as *mut Reactor;
-        queue::main().after_f_s(
+        unsafe {
+            queue::main().after_f_s(
             Time::new_after(Time::NOW, 50_000_000),
             (reactor_ptr,),
-            |(reactor_ptr,)| unsafe {
+            |(reactor_ptr,)| {
                 let reactor = &mut *reactor_ptr;
                 debug!("[WAKE] performing post-wake recovery");
 
@@ -93,7 +94,8 @@ impl SystemEventHandler {
 
                 debug!("[WAKE] wake recovery complete");
             },
-        );
+        )
+        };
     }
 
     fn discover_all_windows_from_server(reactor: &mut Reactor, ws_info: &[WindowServerInfo]) {

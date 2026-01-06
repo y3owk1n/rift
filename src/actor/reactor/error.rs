@@ -8,7 +8,7 @@ pub enum ReactorError {
     AppCommunicationFailed(#[from] tokio::sync::mpsc::error::SendError<crate::actor::app::Request>),
     #[error("Stack line communication failed: {0}")]
     StackLineCommunicationFailed(
-        #[from] tokio::sync::mpsc::error::TrySendError<crate::actor::stack_line::Event>,
+        #[from] Box<tokio::sync::mpsc::error::TrySendError<crate::actor::stack_line::Event>>,
     ),
     #[error("Raise manager communication failed: {0}")]
     RaiseManagerCommunicationFailed(

@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use tracing::{trace, warn};
 
 use crate::actor::app::{AppInfo, WindowId, WindowInfo, pid_t};

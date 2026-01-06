@@ -76,7 +76,7 @@ static CAPTURE_POOL: Lazy<CapturePool> = Lazy::new(|| {
     let mut worker_count = std::thread::available_parallelism()
         .map(|n| n.get().saturating_sub(1))
         .unwrap_or(2);
-    worker_count = worker_count.max(2).min(6);
+    worker_count = worker_count.clamp(2, 6);
     for _ in 0..worker_count {
         let rx = rx.clone();
         thread::spawn(move || {
@@ -156,7 +156,7 @@ fn schedule_fade_completion(overlay_ptr_bits: usize, fade_id: u64, final_alpha: 
         fade_id,
         final_alpha,
     })) as *mut c_void;
-    queue::main().after_f(Time::NOW, ctx, fade_completion_callback);
+    unsafe { queue::main().after_f(Time::NOW, ctx, fade_completion_callback) };
 }
 
 static WORKSPACE_BACKGROUND_COLOR: Lazy<Retained<CGColor>> =
@@ -326,11 +326,11 @@ impl MissionControlState {
     }
 
     fn set_selection(&mut self, selection: Selection) {
-        let is_valid = match (selection, self.mode.as_ref()) {
+        let is_valid = matches!(
+            (selection, self.mode.as_ref()),
             (Selection::Workspace(_), Some(MissionControlMode::AllWorkspaces(_)))
-            | (Selection::Window(_), Some(MissionControlMode::CurrentWorkspace(_))) => true,
-            _ => false,
-        };
+                | (Selection::Window(_), Some(MissionControlMode::CurrentWorkspace(_)))
+        );
         if is_valid {
             self.selection = Some(selection);
         }
@@ -338,34 +338,30 @@ impl MissionControlState {
 
     fn highlight_active_workspace(&mut self, active_id: Option<String>) -> bool {
         let target = active_id.as_deref();
-        if let Some(mode) = self.mode.as_mut() {
-            if let MissionControlMode::AllWorkspaces(workspaces) = mode {
-                let mut changed = false;
-                let mut visible_index = 0usize;
-                let mut active_selection = None;
-                for ws in workspaces.iter_mut() {
-                    let should_be_active = target == Some(ws.id.as_str());
-                    if ws.is_active != should_be_active {
-                        ws.is_active = should_be_active;
-                        changed = true;
-                    }
-                    let should_be_visible = !ws.windows.is_empty() || ws.is_active;
-                    if should_be_visible {
-                        if ws.is_active {
-                            active_selection = Some(visible_index);
-                        }
-                        visible_index += 1;
-                    }
+        if let Some(MissionControlMode::AllWorkspaces(workspaces)) = self.mode.as_mut() {
+            let mut changed = false;
+            let mut visible_index = 0usize;
+            let mut active_selection = None;
+            for ws in workspaces.iter_mut() {
+                let should_be_active = target == Some(ws.id.as_str());
+                if ws.is_active != should_be_active {
+                    ws.is_active = should_be_active;
+                    changed = true;
                 }
-                if let Some(idx) = active_selection
-                    && self.selection() != Some(Selection::Workspace(idx)) {
-                        self.selection = Some(Selection::Workspace(idx));
-                        changed = true;
+                let should_be_visible = !ws.windows.is_empty() || ws.is_active;
+                if should_be_visible {
+                    if ws.is_active {
+                        active_selection = Some(visible_index);
                     }
-                changed
-            } else {
-                false
+                    visible_index += 1;
+                }
             }
+            if let Some(idx) = active_selection
+                && self.selection() != Some(Selection::Workspace(idx)) {
+                    self.selection = Some(Selection::Workspace(idx));
+                    changed = true;
+                }
+            changed
         } else {
             false
         }
@@ -593,14 +589,12 @@ struct ScreenMetrics {
 impl MissionControlOverlay {
     fn gather_screen_metrics(&self) -> Option<(Vec<ScreenMetrics>, CoordinateConverter)> {
         let mut cache = ScreenCache::new(self.mtm);
-        let Some((_descriptors, converter, _spaces)) = cache.refresh() else {
-            return None;
-        };
+        let (_descriptors, converter, _spaces) = cache.refresh()?;
 
         let screens = NSScreen::screens(self.mtm);
         let mut metrics = Vec::new();
         for screen in screens.iter() {
-            if let Ok(screen_id) = screen.get_number() {
+            if let Some(screen_id) = screen.get_number() {
                 let frame = CGDisplayBounds(screen_id.as_u32());
                 metrics.push(ScreenMetrics {
                     id: Some(screen_id),
@@ -628,7 +622,7 @@ impl MissionControlOverlay {
 
     fn main_screen_metric(&self, metrics: &[ScreenMetrics]) -> Option<ScreenMetrics> {
         let screen = NSScreen::mainScreen(self.mtm)?;
-        let screen_id = screen.get_number().ok()?;
+        let screen_id = screen.get_number()?;
         metrics.iter().find(|m| m.id == Some(screen_id)).copied()
     }
 
@@ -1198,7 +1192,6 @@ impl MissionControlOverlay {
         let Some(grid) = WorkspaceGrid::new(visible.len(), bounds) else {
             return;
         };
-        let parent_layer = parent_layer;
         let mut visible_ids: HashSet<String> = HashSet::default();
         visible_ids.reserve(visible.len());
         CATransaction::begin();
@@ -1325,8 +1318,6 @@ impl MissionControlOverlay {
         };
 
         let selected_idx = selected.map(|s| s.min(windows.len().saturating_sub(1)));
-
-        let parent_layer = parent_layer;
 
         CATransaction::begin();
         CATransaction::setDisableActions(true);
@@ -1639,7 +1630,7 @@ impl MissionControlOverlay {
                             let ctx: *mut CGContext = SLWindowContextCreate(
                                 *G_CONNECTION,
                                 wid,
-                                core::ptr::null_mut() as *mut CFType,
+                                core::ptr::null_mut(),
                             );
                             if !ctx.is_null() {
                                 let clear = CGRect::new(CGPoint::new(0.0, 0.0), size);
@@ -1730,7 +1721,7 @@ impl MissionControlOverlay {
                 coordinate_converter = converter;
             }
             scale = screen.backingScaleFactor();
-            if let Ok(screen_id) = screen.get_number() {
+            if let Some(screen_id) = screen.get_number() {
                 frame = CGDisplayBounds(screen_id.as_u32());
             }
         }
@@ -1770,11 +1761,11 @@ impl MissionControlOverlay {
     fn request_refresh(&self) {
         if !self.refresh_pending.swap(true, Ordering::AcqRel) {
             let ptr = self as *const _ as usize;
-            queue::main().after_f(
+            unsafe { queue::main().after_f(
                 Time::new_after(Time::NOW, 8000000),
                 ptr as *mut c_void,
                 refresh_coalesced_cb,
-            );
+            ) };
         }
     }
 
@@ -2023,7 +2014,7 @@ impl MissionControlOverlay {
             SLWindowContextCreate(
                 *G_CONNECTION,
                 self.cgs_window.id(),
-                core::ptr::null_mut() as *mut CFType,
+                core::ptr::null_mut(),
             )
         };
         if !ctx.is_null() {
@@ -2071,7 +2062,7 @@ impl MissionControlOverlay {
         }
 
         let ctx: Box<Ctx> = Box::new((cb, action));
-        queue::main().after_f(Time::NOW, Box::into_raw(ctx) as *mut c_void, action_callback);
+        unsafe { queue::main().after_f(Time::NOW, Box::into_raw(ctx) as *mut c_void, action_callback) };
     }
 
     fn handle_keycode(&self, keycode: u16, flags: CGEventFlags) -> bool {
