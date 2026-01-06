@@ -15,6 +15,3 @@ pub(crate) use workspaces::WorkspaceLayouts;
 pub use crate::model::virtual_workspace::{
     VirtualWorkspaceId, VirtualWorkspaceManager, WorkspaceStats,
 };
-
-#[cfg(test)]
-mod tests;

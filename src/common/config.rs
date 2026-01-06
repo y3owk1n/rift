@@ -635,7 +635,7 @@ fn default_border_g() -> f64 {
 }
 
 fn default_border_b() -> f64 {
-    255.0 / 255.0
+    1.0
 }
 
 fn default_border_a() -> f64 {

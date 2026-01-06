@@ -100,3 +100,67 @@ impl LayoutKind {
         matches!(self, LayoutKind::HorizontalStack | LayoutKind::VerticalStack)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod direction_operations {
+        use super::*;
+
+        #[test]
+        fn direction_step() {
+            assert!(Direction::Right.step(0, 5) < 5);
+            assert!(Direction::Left.step(4, 5) < 5);
+            assert!(Direction::Up.step(0, 5) < 5);
+            assert!(Direction::Down.step(4, 5) < 5);
+        }
+
+        #[test]
+        fn direction_orientation() {
+            assert_eq!(Direction::Left.orientation(), Orientation::Horizontal);
+            assert_eq!(Direction::Right.orientation(), Orientation::Horizontal);
+            assert_eq!(Direction::Up.orientation(), Orientation::Vertical);
+            assert_eq!(Direction::Down.orientation(), Orientation::Vertical);
+        }
+
+        #[test]
+        fn direction_opposite() {
+            assert_eq!(Direction::Left.opposite(), Direction::Right);
+            assert_eq!(Direction::Right.opposite(), Direction::Left);
+            assert_eq!(Direction::Up.opposite(), Direction::Down);
+            assert_eq!(Direction::Down.opposite(), Direction::Up);
+        }
+    }
+
+    mod layout_kind_operations {
+        use super::*;
+
+        #[test]
+        fn layout_kind_orientation() {
+            assert_eq!(LayoutKind::Horizontal.orientation(), Orientation::Horizontal);
+            assert_eq!(LayoutKind::Vertical.orientation(), Orientation::Vertical);
+            assert_eq!(
+                LayoutKind::HorizontalStack.orientation(),
+                Orientation::Horizontal
+            );
+            assert_eq!(LayoutKind::VerticalStack.orientation(), Orientation::Vertical);
+        }
+
+        #[test]
+        fn layout_kind_is_stacked() {
+            assert!(!LayoutKind::Horizontal.is_stacked());
+            assert!(!LayoutKind::Vertical.is_stacked());
+            assert!(LayoutKind::HorizontalStack.is_stacked());
+            assert!(LayoutKind::VerticalStack.is_stacked());
+        }
+
+        #[test]
+        fn layout_kind_is_group() {
+            assert!(!LayoutKind::Horizontal.is_group());
+            assert!(!LayoutKind::Vertical.is_group());
+            assert!(LayoutKind::HorizontalStack.is_group());
+            assert!(LayoutKind::VerticalStack.is_group());
+        }
+    }
+}

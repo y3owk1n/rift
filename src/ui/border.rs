@@ -51,7 +51,7 @@ impl Default for BorderConfig {
             color: BorderColor {
                 r: 51.0 / 255.0,
                 g: 204.0 / 255.0,
-                b: 255.0 / 255.0,
+                b: 1.0,
                 a: 1.0,
             },
             roundness: 8.0,
