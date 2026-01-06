@@ -490,13 +490,28 @@ impl Reactor {
 
     pub fn new(
         config: Config,
-        layout_engine: LayoutEngine,
+        mut layout_engine: LayoutEngine,
         mut record: Record,
         broadcast_tx: BroadcastSender,
         window_notify: Option<(crate::actor::window_notify::Sender, WindowTxStore)>,
     ) -> Reactor {
-        // FIXME: Remove apps that are no longer running from restored state.
+        use objc2_app_kit::NSRunningApplication;
+        use crate::sys::app::NSRunningApplicationExt;
+
         record.start(&config, &layout_engine);
+
+        let all_windows = layout_engine.all_window_ids();
+        let mut pids_to_remove: HashSet<pid_t> = HashSet::default();
+        for wid in &all_windows {
+            if NSRunningApplication::with_process_id(wid.pid).is_none() {
+                pids_to_remove.insert(wid.pid);
+            }
+        }
+        for pid in &pids_to_remove {
+            layout_engine.remove_windows_for_app(*pid);
+            debug!("Removed windows for terminated app PID {}", pid);
+        }
+
         let (raise_manager_tx, _rx) = actor::channel();
         let (window_notify_tx, window_tx_store) = match window_notify {
             Some((tx, store)) => (Some(tx), store),

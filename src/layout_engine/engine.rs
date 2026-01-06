@@ -1892,6 +1892,17 @@ impl LayoutEngine {
         self.virtual_workspace_manager.get_stats()
     }
 
+    pub fn all_window_ids(&self) -> HashSet<WindowId> {
+        self.virtual_workspace_manager.all_window_ids()
+    }
+
+    pub fn remove_windows_for_app(&mut self, pid: pid_t) {
+        self.tree.remove_windows_for_app(pid);
+        self.floating.remove_all_for_pid(pid);
+        self.virtual_workspace_manager.remove_windows_for_app(pid);
+        self.virtual_workspace_manager.remove_app_floating_positions(pid);
+    }
+
     pub fn is_window_floating(&self, window_id: WindowId) -> bool {
         self.floating.is_floating(window_id)
     }

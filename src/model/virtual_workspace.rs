@@ -1312,6 +1312,10 @@ impl VirtualWorkspaceManager {
 
         stats
     }
+
+    pub fn all_window_ids(&self) -> HashSet<WindowId> {
+        self.window_to_workspace.keys().map(|(_space, wid)| *wid).collect()
+    }
 }
 
 #[serde_as]
