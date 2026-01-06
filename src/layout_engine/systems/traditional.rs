@@ -337,7 +337,6 @@ impl TraditionalLayoutSystem {
         container2: NodeId,
         direction: Direction,
     ) {
-        // TODO: Implement intelligent container merging
         let common_parent =
             self.find_or_create_smart_common_parent(layout, container1, container2, direction);
         let container_layout = LayoutKind::from(direction.orientation());
