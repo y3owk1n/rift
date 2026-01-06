@@ -98,8 +98,8 @@ impl SpaceEventHandler {
         }
 
         reactor.window_manager.observed_window_server_ids.insert(wsid);
-        // TODO: figure out why this is happening, we should really know about this app,
-        // why dont we get notifications that its being launched?
+        // If NSRunningApplication returns None, we synthesize AppLaunch with minimal AppInfo
+        // to handle apps that don't trigger launch notifications via the normal channel.
         if let Some(window_server_info) = crate::sys::window_server::get_window(wsid) {
             if window_server_info.layer != 0 {
                 trace!(
@@ -173,6 +173,19 @@ impl SpaceEventHandler {
                         "Received WindowServerAppeared for unknown app - synthesizing AppLaunch"
                     );
                     if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() { wm.send(WmEvent::AppLaunch(window_server_info.pid, AppInfo::from(&*app))) }
+                } else {
+                    warn!(
+                        pid = window_server_info.pid,
+                        wsid = ?wsid,
+                        "NSRunningApplication not found for window - using minimal AppInfo"
+                    );
+                    let fallback_info = AppInfo {
+                        bundle_id: None,
+                        localized_name: format!("Unknown App (PID {})", window_server_info.pid).into(),
+                    };
+                    if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() {
+                        wm.send(WmEvent::AppLaunch(window_server_info.pid, fallback_info));
+                    }
                 }
             } else if let Some(app) = reactor.app_manager.apps.get(&window_server_info.pid)
                 && let Err(err) =
