@@ -29,6 +29,8 @@
 
 ### Fixes of this fork
 
+#### Features
+
 - no longer have any ghost windows with cmd+w
 - if cmd+w happens on the last window, it will try to focus any window that is nearest to it
 - auto switch to the workspace when open an app that has rule that moves to another workspace
@@ -36,10 +38,15 @@
 - when first launching, it will try to stay on the same workspace of the current focused window
 - when quiting rift, it will try to move all the windows (including hidden) to its position, so that we can use it right away
 - when wake from sleep, everything should still be the same as before sleep (layouts, arrangments, windows, etc)
+- added ability to resize windows with mouse
+
+#### Rest
+
 - performance improvements on race conditions
+- fixed `--validate` flag to actually validate the config file instead of the restore file
 - disabled animation by default
 - added more tests
-- fixed `--validate` flag to actually validate the config file instead of the restore file
+- fix every clippy warnings
 
 ### How to install this fork?
 

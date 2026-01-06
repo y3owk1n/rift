@@ -343,6 +343,7 @@ impl WindowEventHandler {
                 return false;
             }
 
+            let window_server_id = window.window_server_id;
             let dragging = event_mouse_state == Some(MouseState::Down)
                 || matches!(
                     reactor.drag_manager.drag_state,
@@ -356,10 +357,36 @@ impl WindowEventHandler {
             if dragging {
                 reactor.ensure_active_drag(wid, &old_frame);
                 reactor.update_active_drag(wid, &new_frame);
-                if old_frame.size != new_frame.size {
+                let is_resize = old_frame.size != new_frame.size;
+                if is_resize {
                     reactor.mark_drag_dirty(wid);
+                    let screens = reactor
+                        .space_manager
+                        .screens
+                        .iter()
+                        .filter_map(|screen| {
+                            let space = reactor.space_manager.space_for_screen(screen)?;
+                            let display_uuid = if screen.display_uuid.is_empty() {
+                                None
+                            } else {
+                                Some(screen.display_uuid.clone())
+                            };
+                            Some((space, screen.frame, display_uuid))
+                        })
+                        .collect::<Vec<_>>();
+                    if let Some(space) = reactor.best_space_for_window(&new_frame, window_server_id)
+                        && reactor.is_space_active(space)
+                    {
+                        reactor.send_layout_event(LayoutEvent::WindowResized {
+                            wid,
+                            old_frame,
+                            new_frame,
+                            screens,
+                        });
+                    }
+                } else {
+                    reactor.maybe_swap_on_drag(wid, new_frame);
                 }
-                reactor.maybe_swap_on_drag(wid, new_frame);
             } else {
                 let screens = reactor
                     .space_manager
@@ -376,7 +403,7 @@ impl WindowEventHandler {
                     })
                     .collect::<Vec<_>>();
 
-                let server_id = window.window_server_id;
+                let server_id = window_server_id;
                 let old_space = reactor.best_space_for_window(&old_frame, server_id);
                 let new_space = reactor.best_space_for_window(&new_frame, server_id);
 

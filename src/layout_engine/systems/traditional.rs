@@ -2898,4 +2898,136 @@ mod tests {
         assert_eq!(windows.len(), 1);
         assert_eq!(windows[0], w(1));
     }
+
+    #[test]
+    fn test_set_frame_from_resize_right_edge() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Horizontal);
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.tree.data.window.node_for(layout, w(1)).unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(960.0, 1080.0));
+        let new_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(800.0, 1080.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let windows = system.visible_windows_in_layout(layout);
+        assert_eq!(windows.len(), 2);
+    }
+
+    #[test]
+    fn test_set_frame_from_resize_left_edge() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Horizontal);
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.tree.data.window.node_for(layout, w(2)).unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(960.0, 0.0), CGSize::new(960.0, 1080.0));
+        let new_frame = CGRect::new(CGPoint::new(1120.0, 0.0), CGSize::new(800.0, 1080.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let windows = system.visible_windows_in_layout(layout);
+        assert_eq!(windows.len(), 2);
+    }
+
+    #[test]
+    fn test_set_frame_from_resize_top_edge() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Vertical);
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.tree.data.window.node_for(layout, w(1)).unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 540.0));
+        let new_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 400.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let windows = system.visible_windows_in_layout(layout);
+        assert_eq!(windows.len(), 2);
+    }
+
+    #[test]
+    fn test_set_frame_from_resize_bottom_edge() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Vertical);
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.tree.data.window.node_for(layout, w(2)).unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(0.0, 540.0), CGSize::new(1920.0, 540.0));
+        let new_frame = CGRect::new(CGPoint::new(0.0, 680.0), CGSize::new(1920.0, 400.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let windows = system.visible_windows_in_layout(layout);
+        assert_eq!(windows.len(), 2);
+    }
+
+    #[test]
+    fn test_set_frame_from_resize_combined_directions() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Horizontal);
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.tree.data.window.node_for(layout, w(1)).unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(960.0, 1080.0));
+        let new_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(800.0, 800.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let windows = system.visible_windows_in_layout(layout);
+        assert_eq!(windows.len(), 2);
+    }
+
+    #[test]
+    fn test_set_frame_from_resize_three_directions_rejected() {
+        let mut system = TraditionalLayoutSystem::default();
+        let layout = system.create_layout();
+        let root = system.root(layout);
+        system.tree.data.layout.set_kind(root, LayoutKind::Horizontal);
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.tree.data.window.node_for(layout, w(1)).unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(960.0, 1080.0));
+        let new_frame = CGRect::new(CGPoint::new(10.0, 10.0), CGSize::new(800.0, 800.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let windows = system.visible_windows_in_layout(layout);
+        assert_eq!(windows.len(), 2);
+    }
 }

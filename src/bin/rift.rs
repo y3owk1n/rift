@@ -230,8 +230,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
         &[
             CGSEventType::Known(KnownCGSEvent::SpaceWindowDestroyed),
             CGSEventType::Known(KnownCGSEvent::SpaceWindowCreated),
-            //CGSEventType::Known(KnownCGSEvent::WindowMoved),
-            //CGSEventType::Known(KnownCGSEvent::WindowResized),
+            CGSEventType::Known(KnownCGSEvent::WindowResized),
         ],
         Some(window_tx_store.clone()),
         mc_active,

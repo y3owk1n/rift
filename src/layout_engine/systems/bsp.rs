@@ -753,6 +753,94 @@ mod tests {
         assert!(system.has_windows_for_app(layout, 2));
         assert!(!system.has_windows_for_app(layout, 999));
     }
+
+    #[test]
+    fn bsp_set_frame_from_resize_right_edge() {
+        use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.window_to_node.get(&w(1)).copied().unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(960.0, 1080.0));
+        let new_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(800.0, 1080.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 2);
+    }
+
+    #[test]
+    fn bsp_set_frame_from_resize_left_edge() {
+        use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.window_to_node.get(&w(2)).copied().unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(960.0, 0.0), CGSize::new(960.0, 1080.0));
+        let new_frame = CGRect::new(CGPoint::new(1120.0, 0.0), CGSize::new(800.0, 1080.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 2);
+    }
+
+    #[test]
+    fn bsp_set_frame_from_resize_top_edge() {
+        use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.window_to_node.get(&w(1)).copied().unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 540.0));
+        let new_frame = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 400.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 2);
+    }
+
+    #[test]
+    fn bsp_set_frame_from_resize_bottom_edge() {
+        use objc2_core_foundation::{CGPoint, CGRect, CGSize};
+
+        let mut system = BspLayoutSystem::default();
+        let layout = system.create_layout();
+
+        system.add_window_after_selection(layout, w(1));
+        system.add_window_after_selection(layout, w(2));
+
+        let screen = CGRect::new(CGPoint::new(0.0, 0.0), CGSize::new(1920.0, 1080.0));
+        let node = system.window_to_node.get(&w(2)).copied().unwrap();
+
+        let old_frame = CGRect::new(CGPoint::new(0.0, 540.0), CGSize::new(1920.0, 540.0));
+        let new_frame = CGRect::new(CGPoint::new(0.0, 680.0), CGSize::new(1920.0, 400.0));
+
+        system.set_frame_from_resize(node, old_frame, new_frame, screen);
+
+        let visible = system.visible_windows_in_layout(layout);
+        assert_eq!(visible.len(), 2);
+    }
 }
 
 impl LayoutSystem for BspLayoutSystem {
@@ -1055,6 +1143,8 @@ impl LayoutSystem for BspLayoutSystem {
                         *fullscreen = false;
                     } else if old_frame == tiling {
                         *fullscreen_within_gaps = false;
+                    } else {
+                        self.set_frame_from_resize(node, old_frame, new_frame, screen);
                     }
                 }
             }
@@ -1379,6 +1469,90 @@ impl LayoutSystem for BspLayoutSystem {
                     Orientation::Horizontal => Orientation::Vertical,
                     Orientation::Vertical => Orientation::Horizontal,
                 };
+            }
+        }
+    }
+}
+
+impl BspLayoutSystem {
+    fn set_frame_from_resize(
+        &mut self,
+        node: NodeId,
+        old_frame: CGRect,
+        new_frame: CGRect,
+        screen: CGRect,
+    ) {
+        let deltas = [
+            (
+                Direction::Left,
+                old_frame.min().x - new_frame.min().x,
+                screen.size.width,
+            ),
+            (
+                Direction::Right,
+                new_frame.max().x - old_frame.max().x,
+                screen.size.width,
+            ),
+            (
+                Direction::Up,
+                old_frame.min().y - new_frame.min().y,
+                screen.size.height,
+            ),
+            (
+                Direction::Down,
+                new_frame.max().y - old_frame.max().y,
+                screen.size.height,
+            ),
+        ];
+
+        for (direction, delta, whole) in deltas {
+            if delta != 0.0 {
+                self.adjust_split_ratio(node, delta / whole, direction);
+                break;
+            }
+        }
+    }
+
+    fn adjust_split_ratio(&mut self, node: NodeId, screen_ratio: f64, direction: Direction) {
+        let can_resize = |kind: &NodeKind| -> bool {
+            if let NodeKind::Split { orientation, .. } = kind {
+                *orientation == direction.orientation()
+            } else {
+                false
+            }
+        };
+
+        let resizing_node = node.ancestors(&self.tree.map).zip(node.ancestors(&self.tree.map).skip(1))
+            .find_map(|(node, parent)| {
+                self.kind.get(parent).and_then(|k| {
+                    if can_resize(k) {
+                        Some((node, parent))
+                    } else {
+                        None
+                    }
+                })
+            })
+            .or_else(|| {
+                node.ancestors(&self.tree.map).zip(node.ancestors(&self.tree.map).skip(1)).find_map(|(node, parent)| {
+                    self.kind.get(parent).and_then(|k| {
+                        if can_resize(k) {
+                            Some((node, parent))
+                        } else {
+                            None
+                        }
+                    })
+                })
+            });
+
+        if let Some((resizing_node, split_node)) = resizing_node {
+            let is_first = Some(resizing_node) == split_node.first_child(&self.tree.map);
+            if let Some(NodeKind::Split { ratio, .. }) = self.kind.get_mut(split_node) {
+                let delta = screen_ratio as f32;
+                if is_first {
+                    *ratio = (*ratio + delta).clamp(0.05, 0.95);
+                } else {
+                    *ratio = (*ratio - delta).clamp(0.05, 0.95);
+                }
             }
         }
     }
