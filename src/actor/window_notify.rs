@@ -1,7 +1,8 @@
 use std::num::NonZeroU32;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-use tracing::debug;
+use tracing::{debug, trace};
 
 use super::reactor::{self, Event};
 use crate::actor::app::WindowId;
@@ -84,6 +85,7 @@ pub struct WindowNotify {
     subscribed: HashSet<CGSEventType>,
     initial_events: Vec<CGSEventType>,
     tx_store: Option<WindowTxStore>,
+    mc_active: Arc<AtomicBool>,
 }
 
 impl WindowNotify {
@@ -92,6 +94,7 @@ impl WindowNotify {
         requests_rx: Receiver,
         initial_events: &[CGSEventType],
         tx_store: Option<WindowTxStore>,
+        mc_active: Arc<AtomicBool>,
     ) -> Self {
         Self {
             events_tx,
@@ -99,6 +102,7 @@ impl WindowNotify {
             subscribed: HashSet::default(),
             initial_events: initial_events.to_vec(),
             tx_store,
+            mc_active,
         }
     }
 
@@ -109,7 +113,7 @@ impl WindowNotify {
         };
 
         for event in self.initial_events.drain(..) {
-            match Self::subscribe(event, self.events_tx.clone(), self.tx_store.clone()) {
+            match Self::subscribe(event, self.events_tx.clone(), self.tx_store.clone(), self.mc_active.clone()) {
                 Ok(()) => {
                     self.subscribed.insert(event);
                     debug!("initial subscription succeeded for event {}", event);
@@ -139,7 +143,7 @@ impl WindowNotify {
                     debug!("already subscribed to event {}", event);
                     return;
                 }
-                match Self::subscribe(event, self.events_tx.clone(), self.tx_store.clone()) {
+                match Self::subscribe(event, self.events_tx.clone(), self.tx_store.clone(), self.mc_active.clone()) {
                     Ok(()) => {
                         self.subscribed.insert(event);
                         debug!("subscribed to event {}", event);
@@ -161,6 +165,7 @@ impl WindowNotify {
         event: CGSEventType,
         events_tx: reactor::Sender,
         tx_store: Option<WindowTxStore>,
+        mc_active: Arc<AtomicBool>,
     ) -> Result<(), i32> {
         let res = window_notify::init(event);
         if res != 0 {
@@ -198,7 +203,10 @@ impl WindowNotify {
                         }
                         CGSEventType::Known(KnownCGSEvent::WindowMoved)
                         | CGSEventType::Known(KnownCGSEvent::WindowResized) => {
-                            // TODO: suppress move/resize while Mission Control is active
+                            if mc_active.load(Ordering::SeqCst) {
+                                trace!("Skipping window move/resize event during Mission Control");
+                                continue;
+                            }
                             let mouse_state = event::get_mouse_state();
                             let wsid = WindowServerId::new(window_id);
                             if let Some(query) = WindowQuery::new(&[wsid]) {

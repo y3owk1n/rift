@@ -59,6 +59,7 @@ use crate::sys::window_server::{
     self, WindowServerId, WindowServerInfo, current_cursor_location, space_is_fullscreen,
     wait_for_native_fullscreen_transition, window_level,
 };
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub type Sender = actor::Sender<Event>;
 type Receiver = actor::Receiver<Event>;
@@ -378,6 +379,7 @@ pub struct Reactor {
     layout_update_in_flight: bool,
     last_activation_time: Option<std::time::Instant>,
     active_spaces: HashSet<SpaceId>,
+    mc_active: std::sync::Arc<AtomicBool>,
 }
 
 #[derive(Debug)]
@@ -470,6 +472,7 @@ impl Reactor {
         menu_tx: menu_bar::Sender,
         stack_line_tx: stack_line::Sender,
         window_notify: Option<(crate::actor::window_notify::Sender, WindowTxStore)>,
+        mc_active: std::sync::Arc<AtomicBool>,
     ) -> Sender {
         let (events_tx, events) = actor::channel();
         let events_tx_clone = events_tx.clone();
@@ -477,7 +480,7 @@ impl Reactor {
             .name("reactor".to_string())
             .spawn(move || {
                 let mut reactor =
-                    Reactor::new(config, layout_engine, record, broadcast_tx, window_notify);
+                    Reactor::new(config, layout_engine, record, broadcast_tx, window_notify, mc_active);
                 reactor.communication_manager.event_tap_tx = Some(event_tap_tx);
                 reactor.menu_manager.menu_tx = Some(menu_tx);
                 reactor.communication_manager.stack_line_tx = Some(stack_line_tx);
@@ -494,6 +497,7 @@ impl Reactor {
         mut record: Record,
         broadcast_tx: BroadcastSender,
         window_notify: Option<(crate::actor::window_notify::Sender, WindowTxStore)>,
+        mc_active: std::sync::Arc<AtomicBool>,
     ) -> Reactor {
         use objc2_app_kit::NSRunningApplication;
         use crate::sys::app::NSRunningApplicationExt;
@@ -586,6 +590,7 @@ impl Reactor {
             layout_update_in_flight: false,
             last_activation_time: None,
             active_spaces: HashSet::default(),
+            mc_active,
         }
     }
 
@@ -2427,6 +2432,7 @@ impl Reactor {
             return;
         }
         self.mission_control_manager.mission_control_state = new_state;
+        self.mc_active.store(active, Ordering::SeqCst);
         self.update_focus_follows_mouse_state();
     }
 

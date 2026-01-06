@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 use std::process;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 
 use clap::{Parser, Subcommand};
 use objc2::MainThreadMarker;
@@ -203,6 +205,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
     let (stack_line_tx, stack_line_rx) = rift_wm::actor::channel();
     let (wnd_tx, wnd_rx) = rift_wm::actor::channel();
     let window_tx_store = WindowTxStore::new();
+    let mc_active = Arc::new(AtomicBool::new(false));
     let events_tx = Reactor::spawn(
         config.clone(),
         layout,
@@ -212,6 +215,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
         menu_tx.clone(),
         stack_line_tx.clone(),
         Some((wnd_tx.clone(), window_tx_store.clone())),
+        mc_active.clone(),
     );
 
     let config_tx =
@@ -229,6 +233,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
             //CGSEventType::Known(KnownCGSEvent::WindowResized),
         ],
         Some(window_tx_store.clone()),
+        mc_active,
     );
 
     let events_tx_mach = events_tx.clone();
