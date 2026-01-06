@@ -157,6 +157,18 @@ fade_enabled = false
 # native macos mission control fade is about 180ms
 fade_duration_ms = 180.0
 
+# [NEW] in this fork
+# Focused window border (jankyborder alternatives)
+[settings.ui.window_border]
+enabled = false
+# Border width in pixels
+width = 2.0
+# Border color: hex string (#33ccff) or RGBA object { r = 0.2, g = 0.8, b = 1.0, a = 1.0 }
+# RGBA values can be 0-1 or 0-255 (e.g., { r = 51, g = 204, b = 255 })
+color = "#33ccff"
+# Corner roundness in pixels (0 = square corners)
+roundness = 8.0
+
 # Trackpad gestures
 [settings.gestures]
 # Enable horizontal swipes to switch virtual workspaces

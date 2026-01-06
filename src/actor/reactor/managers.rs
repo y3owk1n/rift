@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use objc2_core_foundation::CGRect;
 use tracing::trace;
@@ -388,4 +388,99 @@ pub struct MainWindowTrackerManager {
 pub struct PendingSpaceChangeManager {
     pub pending_space_change: Option<PendingSpaceChange>,
     pub topology_relayout_pending: bool,
+}
+
+/// Manages the focused window border overlay
+pub struct BorderManager {
+    pub border_window: Option<std::cell::RefCell<crate::ui::border::FocusBorderWindow>>,
+    pub last_focused_window: Option<WindowId>,
+}
+
+impl BorderManager {
+    pub fn update_focus(
+        &mut self,
+        window_id: Option<WindowId>,
+        window_frame: Option<CGRect>,
+        config: &crate::common::config::WindowBorderSettings,
+        animation_duration: Duration,
+        animate: bool,
+    ) {
+        if !config.enabled {
+            if let Some(ref border_window) = self.border_window {
+                border_window.borrow().hide();
+            }
+            self.last_focused_window = None;
+            return;
+        }
+
+        match (window_id, window_frame) {
+            (Some(wid), Some(frame)) => {
+                if frame.size.width <= 0.0 || frame.size.height <= 0.0 {
+                    if let Some(ref border_window) = self.border_window {
+                        border_window.borrow().hide();
+                    }
+                    self.last_focused_window = None;
+                    return;
+                }
+
+                let border_config = crate::ui::border::BorderConfig::from(config);
+
+                let should_update = match (self.last_focused_window, &self.border_window) {
+                    (Some(last_wid), Some(bw)) if last_wid == wid => {
+                        let current_frame = bw.borrow().current_frame();
+                        current_frame.origin.x != frame.origin.x
+                            || current_frame.origin.y != frame.origin.y
+                            || current_frame.size.width != frame.size.width
+                            || current_frame.size.height != frame.size.height
+                    }
+                    _ => true,
+                };
+
+                if should_update {
+                    if let Some(ref border_window) = self.border_window {
+                        if animate && animation_duration.as_secs_f64() > 0.0 {
+                            border_window.borrow().show_with_animation(frame, animation_duration);
+                        } else {
+                            border_window.borrow().show(frame);
+                        }
+                        border_window.borrow().set_config(border_config);
+                    }
+                    self.last_focused_window = Some(wid);
+                }
+            }
+            (None, _) => {
+                if let Some(ref border_window) = self.border_window {
+                    border_window.borrow().hide();
+                }
+                self.last_focused_window = None;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn update_config(&self, config: &crate::common::config::WindowBorderSettings) {
+        if !config.enabled {
+            if let Some(ref border_window) = self.border_window {
+                border_window.borrow().hide();
+            }
+            return;
+        }
+
+        let border_config = crate::ui::border::BorderConfig::from(config);
+        if let Some(ref border_window) = self.border_window {
+            border_window.borrow().set_config(border_config);
+        }
+    }
+
+    pub fn hide(&self) {
+        if let Some(ref border_window) = self.border_window {
+            border_window.borrow().hide();
+        }
+    }
+
+    pub fn tick_animation(&self) {
+        if let Some(ref border_window) = self.border_window {
+            border_window.borrow().tick_animation();
+        }
+    }
 }

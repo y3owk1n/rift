@@ -48,6 +48,7 @@ use crate::actor::{self, menu_bar, stack_line};
 use crate::common::collections::{BTreeMap, HashMap, HashSet};
 use crate::common::config::Config;
 use crate::common::log::MetricsCommand;
+use crate::ui::border::FocusBorderWindow;
 use crate::layout_engine::{self as layout, Direction, LayoutCommand, LayoutEngine, LayoutEvent};
 use crate::model::VirtualWorkspaceId;
 use crate::model::tx_store::WindowTxStore;
@@ -378,6 +379,7 @@ pub struct Reactor {
     mission_control_manager: managers::MissionControlManager,
     refocus_manager: managers::RefocusManager,
     pending_space_change_manager: managers::PendingSpaceChangeManager,
+    border_manager: managers::BorderManager,
     layout_update_in_flight: bool,
     last_activation_time: Option<std::time::Instant>,
     active_spaces: HashSet<SpaceId>,
@@ -595,6 +597,17 @@ impl Reactor {
                 pending_space_change: None,
                 topology_relayout_pending: false,
             },
+            border_manager: managers::BorderManager {
+                border_window: if config.settings.ui.window_border.enabled {
+                    Some(std::cell::RefCell::new(FocusBorderWindow::new().unwrap_or_else(|e| {
+                        tracing::warn!("Failed to create focus border window: {}", e);
+                        FocusBorderWindow::default()
+                    })))
+                } else {
+                    None
+                },
+                last_focused_window: None,
+            },
             layout_update_in_flight: false,
             last_activation_time: None,
             active_spaces: HashSet::default(),
@@ -688,6 +701,9 @@ impl Reactor {
     async fn run_reactor_loop(mut self, mut events: Receiver) {
         let mut pending_events: Vec<(Span, Event)> = Vec::with_capacity(64);
         let mut coalesce_timer = Timer::repeating(Duration::ZERO, Duration::from_millis(5));
+        let animation_fps = self.config_manager.config.settings.animation_fps;
+        let animation_interval = Duration::from_secs_f64(1.0 / animation_fps);
+        let mut animation_timer = Timer::repeating(Duration::ZERO, animation_interval);
 
         loop {
             tokio::select! {
@@ -710,6 +726,9 @@ impl Reactor {
                             self.handle_event(event);
                         }
                     }
+                }
+                _ = animation_timer.next() => {
+                    self.tick_border_animation();
                 }
             }
         }
@@ -984,6 +1003,8 @@ impl Reactor {
                 self.notification_manager.last_sls_notification_ids = ids;
             }
         }
+
+        self.update_focus_border();
     }
 
     fn create_window_data(&self, window_id: WindowId) -> Option<WindowData> {
@@ -2531,6 +2552,33 @@ impl Reactor {
         // TODO: Optimize this with a cache or something.
         let wid = self.main_window()?;
         self.best_space_for_window_id(wid)
+    }
+
+    fn update_focus_border(&mut self) {
+        let focused_window = self.main_window();
+        let frame = focused_window.and_then(|wid| {
+            self.window_manager
+                .windows
+                .get(&wid)
+                .map(|w| w.frame_monotonic)
+        });
+
+        let animation_duration = Duration::from_secs_f64(
+            self.config_manager.config.settings.animation_duration,
+        );
+        let animate = self.config_manager.config.settings.animate;
+
+        self.border_manager.update_focus(
+            focused_window,
+            frame,
+            &self.config_manager.config.settings.ui.window_border,
+            animation_duration,
+            animate,
+        );
+    }
+
+    fn tick_border_animation(&mut self) {
+        self.border_manager.tick_animation();
     }
 
     fn workspace_command_space(&self) -> Option<SpaceId> {

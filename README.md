@@ -29,7 +29,11 @@
 
 ### Fixes of this fork
 
-#### Features
+#### Feature
+
+- added border for focused window
+
+#### UX
 
 - no longer have any ghost windows with cmd+w
 - if cmd+w happens on the last window, it will try to focus any window that is nearest to it

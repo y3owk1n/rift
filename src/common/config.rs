@@ -389,6 +389,8 @@ pub struct UiSettings {
     pub stack_line: StackLineSettings,
     #[serde(default)]
     pub mission_control: MissionControlSettings,
+    #[serde(default)]
+    pub window_border: WindowBorderSettings,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -515,6 +517,129 @@ fn default_mission_control_fade_duration_ms() -> f64 {
 
 fn default_drag_swap_fraction() -> f64 {
     0.3
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[serde(deny_unknown_fields)]
+pub struct WindowBorderSettings {
+    #[serde(default = "no")]
+    pub enabled: bool,
+    #[serde(default = "default_border_width")]
+    pub width: f64,
+    #[serde(default)]
+    pub color: BorderColor,
+    #[serde(default = "default_border_roundness")]
+    pub roundness: f64,
+}
+
+#[derive(Serialize, Debug, PartialEq, Clone, Default)]
+#[serde(deny_unknown_fields)]
+pub struct BorderColor {
+    #[serde(default = "default_border_r")]
+    pub r: f64,
+    #[serde(default = "default_border_g")]
+    pub g: f64,
+    #[serde(default = "default_border_b")]
+    pub b: f64,
+    #[serde(default = "default_border_a")]
+    pub a: f64,
+}
+
+impl<'de> serde::Deserialize<'de> for BorderColor {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct BorderColorVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for BorderColorVisitor {
+            type Value = BorderColor;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a hex color string like \"#33ccff\", or an object with r, g, b, a fields (0-1 or 0-255)")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let hex = value.trim_start_matches('#');
+                let hex = if hex.len() == 6 { hex } else if hex.len() == 8 { &hex[..6] } else {
+                    return Err(E::invalid_value(serde::de::Unexpected::Str(value), &self));
+                };
+
+                let r = u8::from_str_radix(&hex[0..2], 16).map_err(E::custom)? as f64 / 255.0;
+                let g = u8::from_str_radix(&hex[2..4], 16).map_err(E::custom)? as f64 / 255.0;
+                let b = u8::from_str_radix(&hex[4..6], 16).map_err(E::custom)? as f64 / 255.0;
+
+                Ok(BorderColor { r, g, b, a: 1.0 })
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                let mut r: Option<f64> = None;
+                let mut g: Option<f64> = None;
+                let mut b: Option<f64> = None;
+                let mut a: Option<f64> = None;
+
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        "r" => r = Some(map.next_value()?),
+                        "g" => g = Some(map.next_value()?),
+                        "b" => b = Some(map.next_value()?),
+                        "a" => a = Some(map.next_value()?),
+                        _ => return Err(serde::de::Error::unknown_field(key, &["r", "g", "b", "a"])),
+                    }
+                }
+
+                let r = r.unwrap_or_else(default_border_r);
+                let g = g.unwrap_or_else(default_border_g);
+                let b = b.unwrap_or_else(default_border_b);
+                let a = a.unwrap_or_else(default_border_a);
+
+                let (r, g, b, a) = if r > 1.0 || g > 1.0 || b > 1.0 || a > 1.0 {
+                    (
+                        (r / 255.0).clamp(0.0, 1.0),
+                        (g / 255.0).clamp(0.0, 1.0),
+                        (b / 255.0).clamp(0.0, 1.0),
+                        (a / 255.0).clamp(0.0, 1.0),
+                    )
+                } else {
+                    (r, g, b, a)
+                };
+
+                Ok(BorderColor { r, g, b, a })
+            }
+        }
+
+        deserializer.deserialize_any(BorderColorVisitor)
+    }
+}
+
+fn default_border_width() -> f64 {
+    2.0
+}
+
+fn default_border_roundness() -> f64 {
+    8.0
+}
+
+fn default_border_r() -> f64 {
+    51.0 / 255.0
+}
+
+fn default_border_g() -> f64 {
+    204.0 / 255.0
+}
+
+fn default_border_b() -> f64 {
+    255.0 / 255.0
+}
+
+fn default_border_a() -> f64 {
+    1.0
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, Default)]

@@ -203,6 +203,22 @@ impl CommandEventHandler {
             warn!("Failed to send config update to menu bar: {}", e);
         }
 
+        let border_enabled = reactor.config_manager.config.settings.ui.window_border.enabled;
+        if border_enabled {
+            if reactor.border_manager.border_window.is_none() {
+                if let Ok(border_window) = crate::ui::border::FocusBorderWindow::new() {
+                    reactor.border_manager.border_window = Some(std::cell::RefCell::new(border_window));
+                } else {
+                    warn!("Failed to create focus border window");
+                }
+            }
+        } else {
+            reactor.border_manager.hide();
+            reactor.border_manager.border_window = None;
+        }
+
+        reactor.border_manager.update_config(&reactor.config_manager.config.settings.ui.window_border);
+
         let _ = reactor.update_layout(false, true).unwrap_or_else(|e| {
             warn!("Layout update failed: {}", e);
             false
