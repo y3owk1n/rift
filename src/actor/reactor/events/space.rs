@@ -290,7 +290,6 @@ impl SpaceEventHandler {
             );
             return;
         }
-        // TODO: this logic is flawed if multiple spaces are changing at once
         if reactor.handle_fullscreen_space_transition(&mut spaces) {
             return;
         }

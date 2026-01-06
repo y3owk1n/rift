@@ -289,9 +289,14 @@ impl WindowEventHandler {
                     return false;
                 }
             if requested.0 {
-                // TODO: If the size is different from requested, applying a
-                // correction to the model can result in weird feedback
-                // loops, so we ignore these for now.
+                if !window.frame_monotonic.same_as(new_frame) {
+                    trace!(
+                        ?wid,
+                        ?new_frame,
+                        target=?pending_target.map(|(_, t)| t),
+                        "Ignoring frame change that differs from rift request to avoid feedback loops"
+                    );
+                }
                 return false;
             }
             if triggered_by_rift {

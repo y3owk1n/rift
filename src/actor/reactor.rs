@@ -110,10 +110,10 @@ pub enum Event {
     /// application on startup.
     ///
     /// Both WindowInfo (accessibility) and WindowServerInfo are collected for
-    /// any already-open windows when the launch event is sent. Since this
-    /// event isn't ordered with respect to the Space events, it is possible to
-    /// receive this event for a space we just switched off of.. FIXME. The same
-    /// is true of WindowCreated events.
+    /// any already-open windows when the launch event is sent. This event may
+    /// arrive before or after SpaceChanged events. Windows are processed using
+    /// best_space_for_window which uses window_server_id (via SLSCopySpacesForWindows)
+    /// with a fallback to frame geometry, ensuring correct space assignment.
     ApplicationLaunched {
         pid: pid_t,
         info: AppInfo,
@@ -1081,7 +1081,9 @@ impl Reactor {
                             warn!("Failed to send GetVisibleWindows to app {}: {}", pid, e);
                         }
                 }
-                self.refocus_manager.refocus_state = RefocusState::Pending(space);
+                if !matches!(self.refocus_manager.refocus_state, RefocusState::Pending(_)) {
+                    self.refocus_manager.refocus_state = RefocusState::Pending(space);
+                }
                 self.update_layout(false, false).unwrap_or_else(|e| {
                     warn!("Layout update failed: {}", e);
                     false
