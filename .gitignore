@@ -6,6 +6,5 @@ src/bin/dev.rs
 .devbox
 devbox.json
 devbox.lock
-AGENTS.md
 .envrc
 test-config.toml
