@@ -141,7 +141,9 @@ impl EventTap {
         unsafe { Self::new_with_options(CGTapOpt::ListenOnly, mask, callback, user_info, drop_ctx) }
     }
 
-    pub fn set_enabled(&self, enabled: bool) { CGEvent::tap_enable(&self.port, enabled); }
+    pub fn set_enabled(&self, enabled: bool) {
+        CGEvent::tap_enable(&self.port, enabled);
+    }
 }
 
 impl Drop for EventTap {

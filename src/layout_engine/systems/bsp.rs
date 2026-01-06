@@ -189,12 +189,15 @@ impl Default for BspLayoutSystem {
 impl BspLayoutSystem {
     fn make_leaf(&mut self, window: Option<WindowId>) -> NodeId {
         let id = self.tree.mk_node().into_id();
-        self.kind.insert(id, NodeKind::Leaf {
-            window,
-            fullscreen: false,
-            fullscreen_within_gaps: false,
-            preselected: None,
-        });
+        self.kind.insert(
+            id,
+            NodeKind::Leaf {
+                window,
+                fullscreen: false,
+                fullscreen_within_gaps: false,
+                preselected: None,
+            },
+        );
         if let Some(w) = window {
             self.window_to_node.insert(w, id);
         }
@@ -289,12 +292,15 @@ impl BspLayoutSystem {
                 if let Some(w) = window {
                     self.window_to_node.insert(w, parent_id);
                 }
-                self.kind.insert(parent_id, NodeKind::Leaf {
-                    window,
-                    fullscreen,
-                    fullscreen_within_gaps,
-                    preselected,
-                });
+                self.kind.insert(
+                    parent_id,
+                    NodeKind::Leaf {
+                        window,
+                        fullscreen,
+                        fullscreen_within_gaps,
+                        preselected,
+                    },
+                );
             }
         }
 
@@ -340,10 +346,13 @@ impl BspLayoutSystem {
                     if let Some(w) = existing {
                         self.window_to_node.insert(w, left);
                     }
-                    self.kind.insert(sel, NodeKind::Split {
-                        orientation: Orientation::Horizontal,
-                        ratio: 0.5,
-                    });
+                    self.kind.insert(
+                        sel,
+                        NodeKind::Split {
+                            orientation: Orientation::Horizontal,
+                            ratio: 0.5,
+                        },
+                    );
                     left.detach(&mut self.tree).push_back(sel);
                     right.detach(&mut self.tree).push_back(sel);
                     self.tree.data.selection.select(&self.tree.map, right);
@@ -503,7 +512,9 @@ impl Components {
 mod tests {
     use super::*;
 
-    fn w(idx: u32) -> WindowId { WindowId::new(1, idx) }
+    fn w(idx: u32) -> WindowId {
+        WindowId::new(1, idx)
+    }
 
     #[test]
     fn window_in_direction_prefers_leftmost_when_moving_right() {
@@ -1260,7 +1271,9 @@ impl LayoutSystem for BspLayoutSystem {
         vec![]
     }
 
-    fn parent_of_selection_is_stacked(&self, _layout: LayoutId) -> bool { false }
+    fn parent_of_selection_is_stacked(&self, _layout: LayoutId) -> bool {
+        false
+    }
 
     fn unstack_parent_of_selection(
         &mut self,

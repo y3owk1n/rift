@@ -547,22 +547,25 @@ fn it_respects_wsid_suppression_for_apply_app_rules() {
         ax_subrole: None,
     };
 
-    reactor.window_manager.windows.insert(wid, crate::actor::reactor::WindowState {
-        title: info.title.clone(),
-        frame_monotonic: info.frame,
-        is_ax_standard: info.is_standard,
-        is_ax_root: info.is_root,
-        is_minimized: info.is_minimized,
-        is_manageable: true,
-        ignore_app_rule: false,
-        window_server_id: info.sys_id,
-        bundle_id: info.bundle_id.clone(),
-        bundle_path: info.path.clone(),
-        ax_role: info.ax_role.clone(),
-        ax_subrole: info.ax_subrole.clone(),
-        last_verified: Some(std::time::Instant::now()),
-        is_animating: false,
-    });
+    reactor.window_manager.windows.insert(
+        wid,
+        crate::actor::reactor::WindowState {
+            title: info.title.clone(),
+            frame_monotonic: info.frame,
+            is_ax_standard: info.is_standard,
+            is_ax_root: info.is_root,
+            is_minimized: info.is_minimized,
+            is_manageable: true,
+            ignore_app_rule: false,
+            window_server_id: info.sys_id,
+            bundle_id: info.bundle_id.clone(),
+            bundle_path: info.path.clone(),
+            ax_role: info.ax_role.clone(),
+            ax_subrole: info.ax_subrole.clone(),
+            last_verified: Some(std::time::Instant::now()),
+            is_animating: false,
+        },
+    );
     reactor.window_manager.window_ids.insert(wsid, wid);
 
     // Capture the workspace for this window before applying app rules so we can

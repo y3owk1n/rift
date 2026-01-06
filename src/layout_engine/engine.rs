@@ -608,7 +608,9 @@ impl LayoutEngine {
         }
     }
 
-    pub fn debug_tree(&self, space: SpaceId) { self.debug_tree_desc(space, "", false); }
+    pub fn debug_tree(&self, space: SpaceId) {
+        self.debug_tree_desc(space, "", false);
+    }
 
     pub fn debug_tree_desc(&self, space: SpaceId, desc: &'static str, print: bool) {
         if let Some(workspace_id) = self.virtual_workspace_manager.active_workspace(space) {
@@ -1510,7 +1512,9 @@ impl LayoutEngine {
         Ok(())
     }
 
-    pub fn serialize_to_string(&self) -> String { ron::ser::to_string(&self).unwrap() }
+    pub fn serialize_to_string(&self) -> String {
+        ron::ser::to_string(&self).unwrap()
+    }
 
     #[cfg(test)]
     pub(crate) fn selected_window(&mut self, space: SpaceId) -> Option<WindowId> {
@@ -2094,6 +2098,6 @@ mod tests {
         let engine = LayoutEngine::new(&settings, &layout_settings, None);
 
         let stats = engine.virtual_workspace_manager.get_stats();
-        assert!(stats.total_workspaces >= 0);
+        let _ = stats.total_workspaces;
     }
 }

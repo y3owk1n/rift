@@ -26,17 +26,25 @@ use super::skylight::{
 pub struct SpaceId(u64);
 
 impl SpaceId {
-    pub fn new(id: u64) -> SpaceId { SpaceId(id) }
+    pub fn new(id: u64) -> SpaceId {
+        SpaceId(id)
+    }
 
-    pub fn get(&self) -> u64 { self.0 }
+    pub fn get(&self) -> u64 {
+        self.0
+    }
 }
 
 impl Into<u64> for SpaceId {
-    fn into(self) -> u64 { self.get() }
+    fn into(self) -> u64 {
+        self.get()
+    }
 }
 
 impl ToString for SpaceId {
-    fn to_string(&self) -> String { self.get().to_string() }
+    fn to_string(&self) -> String {
+        self.get().to_string()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -64,7 +72,9 @@ pub struct ScreenDescriptor {
 }
 
 impl ScreenCache<Actual> {
-    pub fn new(mtm: MainThreadMarker) -> Self { Self::new_with(Actual { mtm }) }
+    pub fn new(mtm: MainThreadMarker) -> Self {
+        Self::new_with(Actual { mtm })
+    }
 }
 
 impl<S: System> ScreenCache<S> {
@@ -224,7 +234,9 @@ fn menu_bar_height(did: u32) -> f64 {
     height as f64
 }
 
-fn dock_hidden() -> bool { unsafe { CoreDockGetAutoHideEnabled() } }
+fn dock_hidden() -> bool {
+    unsafe { CoreDockGetAutoHideEnabled() }
+}
 
 fn dock_orientation() -> i32 {
     let mut orientation = 0;
@@ -338,11 +350,15 @@ pub struct CoordinateConverter {
 
 /// Creates a `CoordinateConverter` that returns None for any conversion.
 impl Default for CoordinateConverter {
-    fn default() -> Self { Self { screen_height: f64::NAN } }
+    fn default() -> Self {
+        Self { screen_height: f64::NAN }
+    }
 }
 
 impl CoordinateConverter {
-    pub fn from_height(height: f64) -> Self { Self { screen_height: height } }
+    pub fn from_height(height: f64) -> Self {
+        Self { screen_height: height }
+    }
 
     pub fn from_screen(screen: &NSScreen) -> Option<Self> {
         let screen_id = screen.get_number().ok()?;
@@ -381,7 +397,9 @@ pub trait System {
     fn cg_screens(&self) -> Result<Vec<CGScreenInfo>, CGError>;
     fn display_uuid(&self, screen: &CGScreenInfo) -> CFRetained<CFString>;
     fn ns_screens(&self) -> Vec<NSScreenInfo>;
-    fn notch_height(&self, _did: u32) -> f64 { 0.0 }
+    fn notch_height(&self, _did: u32) -> f64 {
+        0.0
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -501,9 +519,13 @@ type CGDirectDisplayID = u32;
 pub struct ScreenId(CGDirectDisplayID);
 
 impl ScreenId {
-    pub fn new(id: u32) -> Self { ScreenId(id) }
+    pub fn new(id: u32) -> Self {
+        ScreenId(id)
+    }
 
-    pub fn as_u32(&self) -> u32 { self.0 }
+    pub fn as_u32(&self) -> u32 {
+        self.0
+    }
 }
 
 pub trait NSScreenExt {
@@ -549,7 +571,9 @@ pub mod diagnostic {
 
     use super::*;
 
-    pub fn cur_space() -> SpaceId { SpaceId(unsafe { CGSGetActiveSpace(SLSMainConnectionID()) }) }
+    pub fn cur_space() -> SpaceId {
+        SpaceId(unsafe { CGSGetActiveSpace(SLSMainConnectionID()) })
+    }
 
     pub fn visible_spaces() -> CFRetained<CFArray<SpaceId>> {
         unsafe {
@@ -615,15 +639,21 @@ mod test {
         ns_screens: Vec<NSScreenInfo>,
     }
     impl System for Stub {
-        fn cg_screens(&self) -> Result<Vec<CGScreenInfo>, CGError> { Ok(self.cg_screens.clone()) }
+        fn cg_screens(&self) -> Result<Vec<CGScreenInfo>, CGError> {
+            Ok(self.cg_screens.clone())
+        }
 
         fn display_uuid(&self, _screen: &CGScreenInfo) -> CFRetained<CFString> {
             CFString::from_str("stub")
         }
 
-        fn ns_screens(&self) -> Vec<NSScreenInfo> { self.ns_screens.clone() }
+        fn ns_screens(&self) -> Vec<NSScreenInfo> {
+            self.ns_screens.clone()
+        }
 
-        fn notch_height(&self, _did: u32) -> f64 { 0.0 }
+        fn notch_height(&self, _did: u32) -> f64 {
+            0.0
+        }
     }
 
     struct SequenceSystem {
@@ -662,7 +692,9 @@ mod test {
             self.ns_screens.borrow_mut().pop_front().unwrap_or_default()
         }
 
-        fn notch_height(&self, _did: u32) -> f64 { 0.0 }
+        fn notch_height(&self, _did: u32) -> f64 {
+            0.0
+        }
     }
 
     #[test]

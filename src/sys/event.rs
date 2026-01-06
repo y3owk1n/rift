@@ -24,7 +24,9 @@ const MOUSE_STATE_UNKNOWN: u8 = 0;
 static MOUSE_STATE: AtomicU8 = AtomicU8::new(MOUSE_STATE_UNKNOWN);
 
 impl From<MouseState> for u8 {
-    fn from(state: MouseState) -> u8 { state as u8 }
+    fn from(state: MouseState) -> u8 {
+        state as u8
+    }
 }
 
 impl TryFrom<u8> for MouseState {
@@ -39,7 +41,9 @@ impl TryFrom<u8> for MouseState {
     }
 }
 
-pub fn set_mouse_state(state: MouseState) { MOUSE_STATE.store(state.into(), Ordering::Relaxed); }
+pub fn set_mouse_state(state: MouseState) {
+    MOUSE_STATE.store(state.into(), Ordering::Relaxed);
+}
 
 pub fn get_mouse_state() -> Option<MouseState> {
     match MouseState::try_from(MOUSE_STATE.load(Ordering::Relaxed)) {
@@ -52,6 +56,10 @@ pub fn warp_mouse(point: CGPoint) -> Result<(), CGError> {
     cg_ok(unsafe { CGWarpMouseCursorPosition(point) })
 }
 
-pub fn hide_mouse() -> Result<(), CGError> { cg_ok(CGDisplayHideCursor(kCGNullDirectDisplay)) }
+pub fn hide_mouse() -> Result<(), CGError> {
+    cg_ok(CGDisplayHideCursor(kCGNullDirectDisplay))
+}
 
-pub fn show_mouse() -> Result<(), CGError> { cg_ok(CGDisplayShowCursor(kCGNullDirectDisplay)) }
+pub fn show_mouse() -> Result<(), CGError> {
+    cg_ok(CGDisplayShowCursor(kCGNullDirectDisplay))
+}

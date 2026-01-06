@@ -113,7 +113,8 @@ impl NotificationCenterInner {
     fn new(events_tx: wm_controller::Sender) -> Retained<Self> {
         let instance = Instance {
             screen_cache: RefCell::new(ScreenCache::new(
-                MainThreadMarker::new().expect("NotificationCenter must be created on the main thread"),
+                MainThreadMarker::new()
+                    .expect("NotificationCenter must be created on the main thread"),
             )),
             events_tx,
             refresh_pending: Cell::new(false),
@@ -237,7 +238,9 @@ impl NotificationCenterInner {
         }
     }
 
-    fn send_event(&self, event: WmEvent) { _ = self.ivars().events_tx.send(event); }
+    fn send_event(&self, event: WmEvent) {
+        _ = self.ivars().events_tx.send(event);
+    }
 
     fn running_application(
         &self,

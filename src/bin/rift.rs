@@ -126,7 +126,10 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
         std::process::exit(1);
     }
 
-    let config_path = opt.config.clone().unwrap_or_else(|| config_file().expect("Failed to determine config file path"));
+    let config_path = opt
+        .config
+        .clone()
+        .unwrap_or_else(|| config_file().expect("Failed to determine config file path"));
     let mut config = match Config::read(&config_path) {
         Ok(cfg) => cfg,
         Err(e) if config_path.exists() => {
@@ -135,7 +138,9 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
             eprintln!("  - File is not valid TOML");
             eprintln!("  - Contains unsupported configuration options");
             eprintln!("  - File permissions issue");
-            eprintln!("\nRun 'rift --validate' for more details, or delete the file to use defaults.");
+            eprintln!(
+                "\nRun 'rift --validate' for more details, or delete the file to use defaults."
+            );
             process::exit(1);
         }
         Err(_) => {

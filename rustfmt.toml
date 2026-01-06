@@ -1,14 +1,19 @@
-unstable_features = true
+# rustfmt configuration for stable Rust
+# Some features are commented out as they require nightly
 
-imports_granularity = 'Module'
-group_imports = "StdExternalCrate"
+max_width = 100
 struct_lit_width = 30
 single_line_let_else_max_width = 60
 chain_width = 80
 fn_call_width = 65
-fn_single_line = true
-where_single_line = true
 use_field_init_shorthand = true
-reorder_impl_items = true
-overflow_delimited_expr = true
-brace_style = 'PreferSameLine'
+
+# Requires nightly:
+# fn_single_line = true
+# where_single_line = true
+# imports_granularity = "Module"
+# group_imports = "StdExternalCrate"
+# reorder_impl_items = true
+# overflow_delimited_expr = true
+# brace_style = "PreferSameLine"
+# unstable_features = true

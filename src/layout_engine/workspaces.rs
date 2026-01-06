@@ -20,7 +20,9 @@ struct SpaceLayoutInfo {
 }
 
 impl SpaceLayoutInfo {
-    fn active(&self) -> Option<LayoutId> { self.configurations.get(&self.active_size).copied() }
+    fn active(&self) -> Option<LayoutId> {
+        self.configurations.get(&self.active_size).copied()
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]

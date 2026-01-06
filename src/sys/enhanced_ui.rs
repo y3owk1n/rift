@@ -13,7 +13,9 @@ pub fn set_enhanced_user_interface(element: &AXUIElement, enabled: bool) -> Resu
 }
 
 pub fn with_enhanced_ui_disabled<F, R>(element: &AXUIElement, f: F) -> R
-where F: FnOnce() -> R {
+where
+    F: FnOnce() -> R,
+{
     let original_state = get_enhanced_user_interface(element);
 
     if original_state {
@@ -34,7 +36,9 @@ where F: FnOnce() -> R {
 }
 
 pub fn with_system_enhanced_ui_disabled<F, R>(f: F) -> R
-where F: FnOnce() -> R {
+where
+    F: FnOnce() -> R,
+{
     let system_element = AXUIElement::system_wide();
     with_enhanced_ui_disabled(&system_element, f)
 }

@@ -9,9 +9,9 @@ use crate::actor::wm_controller::WmEvent;
 use crate::actor::{menu_bar, raise_manager};
 use crate::common::collections::HashMap;
 use crate::common::config::{self as config, Config};
-use crate::common::log::{handle_command, MetricsCommand};
+use crate::common::log::{MetricsCommand, handle_command};
 use crate::layout_engine::{EventResponse, LayoutCommand, LayoutEvent};
-use crate::sys::screen::{order_visible_spaces_by_position, SpaceId};
+use crate::sys::screen::{SpaceId, order_visible_spaces_by_position};
 use crate::sys::window_server::{self as window_server, WindowServerId};
 
 pub struct CommandEventHandler;

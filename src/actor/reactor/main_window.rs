@@ -21,11 +21,14 @@ impl MainWindowTracker {
             &Event::ApplicationLaunched {
                 pid, is_frontmost, main_window, ..
             } => {
-                self.apps.insert(pid, AppState {
-                    is_frontmost,
-                    frontmost_is_quiet: Quiet::No,
-                    main_window,
-                });
+                self.apps.insert(
+                    pid,
+                    AppState {
+                        is_frontmost,
+                        frontmost_is_quiet: Quiet::No,
+                        main_window,
+                    },
+                );
                 (pid, Quiet::No)
             }
             &Event::ApplicationThreadTerminated(pid) => {

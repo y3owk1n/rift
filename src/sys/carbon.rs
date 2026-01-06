@@ -78,11 +78,7 @@ impl Event {
                 &mut out as *mut T as *mut c_void,
             )
         };
-        if status == NO_ERR {
-            Some(out)
-        } else {
-            None
-        }
+        if status == NO_ERR { Some(out) } else { None }
     }
 }
 

@@ -1,7 +1,7 @@
 use tracing::{trace, warn};
 
-use crate::actor::app::{pid_t, AppInfo, WindowId, WindowInfo};
-use crate::actor::reactor::{utils, Event, LayoutEvent, Reactor, WindowState};
+use crate::actor::app::{AppInfo, WindowId, WindowInfo, pid_t};
+use crate::actor::reactor::{Event, LayoutEvent, Reactor, WindowState, utils};
 use crate::common::collections::{BTreeMap, HashSet};
 use crate::model::virtual_workspace::AppRuleResult;
 use crate::sys::screen::SpaceId;
@@ -406,13 +406,11 @@ impl WindowDiscoveryHandler {
             let Some(state) = reactor.window_manager.windows.get(&wid) else {
                 // Window might exist in window_ids but not yet in windows.
                 // Try to look up its window server info from the server directly.
-                let wsid = reactor.window_manager.window_ids.iter().find_map(|(ws, w)| {
-                    if w == &wid {
-                        Some(*ws)
-                    } else {
-                        None
-                    }
-                });
+                let wsid = reactor
+                    .window_manager
+                    .window_ids
+                    .iter()
+                    .find_map(|(ws, w)| if w == &wid { Some(*ws) } else { None });
                 if wsid.is_some() {
                     // Window exists on the server, add it to the layout
                     let Some(space) = reactor.best_space_for_window_id(wid) else {
@@ -494,31 +492,28 @@ impl WindowDiscoveryHandler {
             if !windows_for_space.is_empty() {
                 for wid in &windows_for_space {
                     // Get window info from cache or query the server directly
-                    let (title_opt, ax_role, ax_subrole) = if let Some(window) =
-                        reactor.window_manager.windows.get(wid)
-                    {
-                        (
-                            Some(window.title.clone()),
-                            window.ax_role.clone(),
-                            window.ax_subrole.clone(),
-                        )
-                    } else {
-                        // If window is not in our cache, we don't have full info yet.
-                        // But if it's in window_ids, we know it exists and should be added.
-                        let wsid = reactor.window_manager.window_ids.iter().find_map(|(ws, w)| {
-                            if w == wid {
-                                Some(*ws)
-                            } else {
-                                None
-                            }
-                        });
-                        if wsid.is_some() {
-                            (None, None, None)
+                    let (title_opt, ax_role, ax_subrole) =
+                        if let Some(window) = reactor.window_manager.windows.get(wid) {
+                            (
+                                Some(window.title.clone()),
+                                window.ax_role.clone(),
+                                window.ax_subrole.clone(),
+                            )
                         } else {
-                            // Window not in cache and not in window_ids - skip it
-                            continue;
-                        }
-                    };
+                            // If window is not in our cache, we don't have full info yet.
+                            // But if it's in window_ids, we know it exists and should be added.
+                            let wsid = reactor
+                                .window_manager
+                                .window_ids
+                                .iter()
+                                .find_map(|(ws, w)| if w == wid { Some(*ws) } else { None });
+                            if wsid.is_some() {
+                                (None, None, None)
+                            } else {
+                                // Window not in cache and not in window_ids - skip it
+                                continue;
+                            }
+                        };
 
                     let assign_result = reactor
                         .layout_manager

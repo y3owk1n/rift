@@ -456,7 +456,9 @@ impl From<WindowInfo> for WindowState {
 
 impl WindowState {
     #[inline]
-    fn is_effectively_manageable(&self) -> bool { self.is_manageable && !self.ignore_app_rule }
+    fn is_effectively_manageable(&self) -> bool {
+        self.is_manageable && !self.ignore_app_rule
+    }
 }
 
 impl Reactor {
@@ -580,7 +582,9 @@ impl Reactor {
         }
     }
 
-    fn is_space_active(&self, space: SpaceId) -> bool { self.active_spaces.contains(&space) }
+    fn is_space_active(&self, space: SpaceId) -> bool {
+        self.active_spaces.contains(&space)
+    }
 
     // fn store_txid(&self, wsid: Option<WindowServerId>, txid: TransactionId, target: CGRect) {
     //     self.transaction_manager.store_txid(wsid, txid, target);

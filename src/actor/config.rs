@@ -29,7 +29,11 @@ pub struct ConfigActor {
 
 impl ConfigActor {
     pub fn spawn(config: Config, reactor_tx: reactor::Sender) -> Sender {
-        Self::spawn_with_path(config, reactor_tx, crate::common::config::config_file().expect("Failed to determine config file path"))
+        Self::spawn_with_path(
+            config,
+            reactor_tx,
+            crate::common::config::config_file().expect("Failed to determine config file path"),
+        )
     }
 
     pub fn spawn_with_path(
@@ -67,7 +71,9 @@ impl ConfigActor {
         }
     }
 
-    fn handle_config_query(&self) -> Config { self.config.clone() }
+    fn handle_config_query(&self) -> Config {
+        self.config.clone()
+    }
 
     fn handle_config_command(&mut self, cmd: ConfigCommand) -> Result<(), String> {
         debug!("Applying config command: {:?}", cmd);

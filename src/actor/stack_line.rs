@@ -78,7 +78,9 @@ impl StackLine {
         }
     }
 
-    fn is_enabled(&self) -> bool { self.config.settings.ui.stack_line.enabled }
+    fn is_enabled(&self) -> bool {
+        self.config.settings.ui.stack_line.enabled
+    }
 
     #[instrument(name = "stack_line::handle_event", skip(self))]
     fn handle_event(&mut self, event: Event) {

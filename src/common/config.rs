@@ -536,11 +536,7 @@ pub enum VerticalPlacement {
 
 impl StackLineSettings {
     pub fn thickness(&self) -> f64 {
-        if self.enabled {
-            self.thickness
-        } else {
-            0.0
-        }
+        if self.enabled { self.thickness } else { 0.0 }
     }
 }
 
@@ -1399,9 +1395,11 @@ mod tests {
         let mut settings = Settings::default();
         settings.gestures.swipe_vertical_tolerance = -1.0;
         let issues = settings.validate();
-        assert!(issues
-            .iter()
-            .any(|i| i.contains("swipe_vertical_tolerance must be non-negative")));
+        assert!(
+            issues
+                .iter()
+                .any(|i| i.contains("swipe_vertical_tolerance must be non-negative"))
+        );
     }
 
     #[test]

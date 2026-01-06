@@ -1,5 +1,5 @@
 #![allow(non_camel_case_types)]
-use std::ffi::{c_char, c_void, CStr};
+use std::ffi::{CStr, c_char, c_void};
 
 use objc2_core_foundation::{CFNumber, CFNumberType, CFRetained, CFString, CFType};
 use once_cell::sync::OnceCell;
@@ -42,7 +42,7 @@ unsafe extern "C" {
     fn MTActuatorOpen(actuator: *mut CFType) -> i32; // IOReturn
     fn MTActuatorIsOpen(actuator: *mut CFType) -> bool;
     fn MTActuatorActuate(actuator: *mut CFType, pattern: i32, unk: i32, f1: f32, f2: f32) -> i32; // IOReturn
-                                                                                                  //fn MTActuatorClose(actuator: CFTypeRef);
+    //fn MTActuatorClose(actuator: CFTypeRef);
 
     fn CFGetTypeID(cf: *mut CFType) -> usize;
     fn CFNumberGetTypeID() -> usize;

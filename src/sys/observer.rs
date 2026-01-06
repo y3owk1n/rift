@@ -68,7 +68,9 @@ impl<F: Fn(AXUIElement, &str) + 'static> ObserverBuilder<F> {
     }
 }
 
-unsafe fn destruct<T>(ptr: *mut ()) { let _ = unsafe { Box::from_raw(ptr as *mut T) }; }
+unsafe fn destruct<T>(ptr: *mut ()) {
+    let _ = unsafe { Box::from_raw(ptr as *mut T) };
+}
 
 impl Drop for Observer {
     fn drop(&mut self) {

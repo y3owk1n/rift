@@ -4,7 +4,7 @@ use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use tracing::{debug, trace};
 
 use super::TransactionId;
-use crate::actor::app::{pid_t, AppThreadHandle, Request, WindowId};
+use crate::actor::app::{AppThreadHandle, Request, WindowId, pid_t};
 use crate::actor::reactor::Reactor;
 use crate::common::collections::HashMap;
 use crate::common::config::AnimationEasing;

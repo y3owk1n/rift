@@ -38,13 +38,17 @@ pub enum SLSWindowTags {
 impl BitAnd for SLSWindowTags {
     type Output = u64;
 
-    fn bitand(self, rhs: Self) -> Self::Output { self as u64 & rhs as u64 }
+    fn bitand(self, rhs: Self) -> Self::Output {
+        self as u64 & rhs as u64
+    }
 }
 
 impl BitAnd<SLSWindowTags> for u64 {
     type Output = u64;
 
-    fn bitand(self, rhs: SLSWindowTags) -> Self::Output { self & (rhs as u64) }
+    fn bitand(self, rhs: SLSWindowTags) -> Self::Output {
+        self & (rhs as u64)
+    }
 }
 
 #[repr(u32)]
@@ -109,7 +113,9 @@ impl From<CGSEventType> for u32 {
 
 impl fmt::Display for KnownCGSEvent {
     #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(self, f) }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
 }
 
 impl fmt::Display for CGSEventType {
