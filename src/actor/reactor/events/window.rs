@@ -22,7 +22,6 @@ impl WindowEventHandler {
         ws_info: Option<WindowServerInfo>,
         _mouse_state: Option<MouseState>,
     ) {
-        // FIXME: We assume all windows are on the main screen.
         if let Some(wsid) = window.sys_id {
             reactor.window_manager.window_ids.insert(wsid, wid);
             reactor.window_manager.observed_window_server_ids.remove(&wsid);
