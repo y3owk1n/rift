@@ -9,6 +9,7 @@ use objc2_core_graphics::CGContext;
 use objc2_quartz_core::{CALayer, CATransaction};
 use tracing::warn;
 
+use crate::actor::app::WindowId;
 use crate::common::config::{HorizontalPlacement, VerticalPlacement};
 use crate::sys::cgs_window::{CgsWindow, CgsWindowError};
 use crate::sys::screen::SpaceId;
@@ -108,6 +109,7 @@ pub struct GroupDisplayData {
     pub group_kind: GroupKind,
     pub total_count: usize,
     pub selected_index: usize,
+    pub window_ids: Vec<WindowId>,
 }
 
 pub type SegmentClickCallback = Rc<dyn Fn(usize)>;
@@ -230,6 +232,10 @@ impl GroupIndicatorWindow {
 
     pub fn group_data(&self) -> Option<GroupDisplayData> {
         self.state.borrow().group_data.clone()
+    }
+
+    pub fn window_ids(&self) -> Vec<WindowId> {
+        self.group_data().map(|d| d.window_ids).unwrap_or_default()
     }
 
     pub fn click_segment(&self, segment_index: usize) -> Result<(), CgsWindowError> {

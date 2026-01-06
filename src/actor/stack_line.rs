@@ -6,6 +6,8 @@ use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use tracing::instrument;
 
 use crate::actor::{self, reactor};
+use crate::actor::reactor::{Command, ReactorCommand};
+use crate::actor::app::WindowId;
 use crate::common::collections::HashMap;
 use crate::common::config::{Config, HorizontalPlacement, VerticalPlacement};
 use crate::layout_engine::LayoutKind;
@@ -21,6 +23,7 @@ pub struct GroupInfo {
     pub frame: CGRect,
     pub total_count: usize,
     pub selected_index: usize,
+    pub window_ids: Vec<WindowId>,
 }
 
 #[derive(Debug)]
@@ -179,12 +182,21 @@ impl StackLine {
         tracing::debug!("Updated stack line configuration");
     }
 
-    // TODO: make this work
     fn handle_indicator_clicked(&mut self, node_id: NodeId, segment_index: usize) {
-        // TODO: Send event to reactor when indicators are clicked
-        // For now just log the click
-        tracing::debug!(?node_id, segment_index, "Group indicator clicked");
-        // self.reactor_tx.send(reactor::Event::GroupIndicatorClicked { node_id, segment_index });
+        if let Some(indicator) = self.indicators.get(&node_id) {
+            let window_ids = indicator.window_ids();
+            if let Some(window_id) = window_ids.get(segment_index) {
+                tracing::debug!(?node_id, segment_index, ?window_id, "Group indicator clicked - focusing window");
+                let _ = self.reactor_tx.send(reactor::Event::Command(Command::Reactor(ReactorCommand::FocusWindow {
+                    window_id: *window_id,
+                    window_server_id: None,
+                })));
+            } else {
+                tracing::debug!(?node_id, segment_index, "Group indicator clicked with invalid segment index");
+            }
+        } else {
+            tracing::debug!(?node_id, segment_index, "Group indicator clicked but not found in map");
+        }
     }
 
     fn update_or_create_indicator(&mut self, group: GroupInfo) {
@@ -202,6 +214,7 @@ impl StackLine {
             group_kind,
             total_count: group.total_count,
             selected_index: group.selected_index,
+            window_ids: group.window_ids,
         };
 
         let indicator_frame = Self::calculate_indicator_frame(
