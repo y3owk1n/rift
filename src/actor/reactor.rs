@@ -17,6 +17,8 @@ pub mod transaction_manager;
 mod utils;
 #[cfg(test)]
 mod testing;
+#[cfg(test)]
+mod tests;
 
 use std::thread;
 use std::time::Duration;

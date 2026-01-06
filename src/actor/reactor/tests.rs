@@ -617,3 +617,38 @@ fn it_respects_wsid_suppression_for_apply_app_rules() {
 
     assert_eq!(before_ws, after_ws);
 }
+
+#[test]
+fn it_handles_rapid_space_changes() {
+    let mut apps = Apps::new();
+    let mut reactor = Reactor::new_for_test(LayoutEngine::new(
+        &crate::common::config::VirtualWorkspaceSettings::default(),
+        &crate::common::config::LayoutSettings::default(),
+        None,
+    ));
+    let screen = CGRect::new(CGPoint::new(0., 0.), CGSize::new(1000., 1000.));
+    let space1 = SpaceId::new(1);
+    let space2 = SpaceId::new(2);
+    let space3 = SpaceId::new(3);
+
+    reactor.handle_event(screen_params_event(vec![screen], vec![Some(space1)], vec![]));
+
+    reactor.handle_events(apps.make_app(1, make_windows(2)));
+    let _events = apps.simulate_events();
+
+    let initial_windows = apps.windows.clone();
+
+    reactor.handle_event(Event::SpaceChanged(vec![Some(space2)], vec![]));
+    reactor.handle_event(Event::SpaceChanged(vec![Some(space3)], vec![]));
+    reactor.handle_event(Event::SpaceChanged(vec![Some(space1)], vec![]));
+
+    let final_windows = apps.windows.clone();
+
+    for (wid, state) in initial_windows {
+        assert!(
+            final_windows.contains_key(&wid),
+            "{wid:?} was lost during rapid space changes"
+        );
+        assert_eq!(state.frame, final_windows[&wid].frame);
+    }
+}
