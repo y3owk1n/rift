@@ -167,8 +167,8 @@ impl LayoutEngine {
                     == Some(workspace_id)
             });
 
-        if focus_window.is_none() {
-            if let Some(layout) = self.workspace_layouts.active(space, workspace_id) {
+        if focus_window.is_none()
+            && let Some(layout) = self.workspace_layouts.active(space, workspace_id) {
                 let selected = self.tree.selected_window(layout).filter(|wid| {
                     self.virtual_workspace_manager.workspace_for_window(space, *wid)
                         == Some(workspace_id)
@@ -179,7 +179,6 @@ impl LayoutEngine {
                 });
                 focus_window = selected.or(visible);
             }
-        }
 
         if focus_window.is_none() {
             let floating_windows = self.active_floating_windows_in_workspace(space);
@@ -436,13 +435,12 @@ impl LayoutEngine {
             if candidate_space == current_space {
                 continue;
             }
-            if let Some(candidate_center) = space_centers.get(&candidate_space) {
-                if let Some(delta) =
+            if let Some(candidate_center) = space_centers.get(&candidate_space)
+                && let Some(delta) =
                     Self::directional_delta(direction, current_center, candidate_center)
                 {
                     candidates.push((candidate_space, delta));
                 }
-            }
         }
 
         if !candidates.is_empty() {
@@ -488,13 +486,11 @@ impl LayoutEngine {
 
     fn space_with_window(&self, wid: WindowId) -> Option<SpaceId> {
         for space in self.workspace_layouts.spaces() {
-            if let Some(ws_id) = self.virtual_workspace_manager.active_workspace(space) {
-                if let Some(layout) = self.workspace_layouts.active(space, ws_id) {
-                    if self.tree.contains_window(layout, wid) {
+            if let Some(ws_id) = self.virtual_workspace_manager.active_workspace(space)
+                && let Some(layout) = self.workspace_layouts.active(space, ws_id)
+                    && self.tree.contains_window(layout, wid) {
                         return Some(space);
                     }
-                }
-            }
 
             if self.floating.active_flat(space).contains(&wid) {
                 return Some(space);
@@ -741,11 +737,10 @@ impl LayoutEngine {
                         desired.push(wid);
                     }
 
-                    if desired.is_empty() && total_tiled_count == 0 {
-                        if self.tree.has_windows_for_app(layout, pid) {
+                    if desired.is_empty() && total_tiled_count == 0
+                        && self.tree.has_windows_for_app(layout, pid) {
                             continue;
                         }
-                    }
 
                     let current: Vec<WindowId> = self
                         .tree
@@ -1022,13 +1017,13 @@ impl LayoutEngine {
                     "MoveFocus command received, direction: {:?}, is_floating: {}",
                     direction, is_floating
                 );
-                return self.move_focus_internal(
+                self.move_focus_internal(
                     space,
                     visible_spaces,
                     visible_space_centers,
                     direction,
                     is_floating,
-                );
+                )
             }
             LayoutCommand::Ascend => {
                 if is_floating {
@@ -1043,8 +1038,8 @@ impl LayoutEngine {
             }
             LayoutCommand::MoveNode(direction) => {
                 self.workspace_layouts.mark_last_saved(space, workspace_id, layout);
-                if !self.tree.move_selection(layout, direction) {
-                    if let Some(new_space) = self.next_space_for_direction(
+                if !self.tree.move_selection(layout, direction)
+                    && let Some(new_space) = self.next_space_for_direction(
                         space,
                         direction,
                         visible_spaces,
@@ -1053,7 +1048,6 @@ impl LayoutEngine {
                         let new_layout = self.layout(new_space);
                         self.tree.move_selection_to_layout_after_selection(layout, new_layout);
                     }
-                }
                 EventResponse::default()
             }
             LayoutCommand::ToggleFullscreen => {
@@ -1136,7 +1130,9 @@ impl LayoutEngine {
             LayoutCommand::ToggleOrientation => {
                 self.workspace_layouts.mark_last_saved(space, workspace_id, layout);
 
-                let resp = match &mut self.tree {
+                
+
+                match &mut self.tree {
                     LayoutSystemKind::Traditional(s) => {
                         if s.parent_of_selection_is_stacked(layout) {
                             let default_orientation: crate::common::config::StackDefaultOrientation =
@@ -1161,9 +1157,7 @@ impl LayoutEngine {
                         s.toggle_tile_orientation(layout);
                         EventResponse::default()
                     }
-                };
-
-                resp
+                }
             }
             LayoutCommand::ResizeWindowGrow => {
                 if is_floating {
@@ -1342,8 +1336,8 @@ impl LayoutEngine {
         for (index, wid) in hidden_windows.into_iter().enumerate() {
             let original_frame = get_window_frame(wid);
 
-            if self.floating.is_floating(wid) {
-                if let Some(workspace_id) =
+            if self.floating.is_floating(wid)
+                && let Some(workspace_id) =
                     self.virtual_workspace_manager.workspace_for_window(space, wid)
                 {
                     ensure_visible_floating(
@@ -1359,7 +1353,6 @@ impl LayoutEngine {
                         &window_size,
                     );
                 }
-            }
 
             let original_size =
                 original_frame.map(|f| f.size).unwrap_or_else(|| CGSize::new(500.0, 500.0));
@@ -1531,8 +1524,7 @@ impl LayoutEngine {
             LayoutCommand::NextWorkspace(skip_empty) => {
                 if let Some(current_workspace) =
                     self.virtual_workspace_manager.active_workspace(space)
-                {
-                    if let Some(next_workspace) = self.virtual_workspace_manager.next_workspace(
+                    && let Some(next_workspace) = self.virtual_workspace_manager.next_workspace(
                         space,
                         current_workspace,
                         *skip_empty,
@@ -1546,14 +1538,12 @@ impl LayoutEngine {
 
                         return self.refocus_workspace(space, next_workspace);
                     }
-                }
                 EventResponse::default()
             }
             LayoutCommand::PrevWorkspace(skip_empty) => {
                 if let Some(current_workspace) =
                     self.virtual_workspace_manager.active_workspace(space)
-                {
-                    if let Some(prev_workspace) = self.virtual_workspace_manager.prev_workspace(
+                    && let Some(prev_workspace) = self.virtual_workspace_manager.prev_workspace(
                         space,
                         current_workspace,
                         *skip_empty,
@@ -1567,7 +1557,6 @@ impl LayoutEngine {
 
                         return self.refocus_workspace(space, prev_workspace);
                     }
-                }
                 EventResponse::default()
             }
             LayoutCommand::SwitchToWorkspace(workspace_index) => {
@@ -1668,13 +1657,12 @@ impl LayoutEngine {
                     return EventResponse::default();
                 }
 
-                if !is_floating {
-                    if let Some(target_layout) =
+                if !is_floating
+                    && let Some(target_layout) =
                         self.workspace_layouts.active(op_space, target_workspace_id)
                     {
                         self.tree.add_window_after_selection(target_layout, focused_window);
                     }
-                }
 
                 let active_workspace = self.virtual_workspace_manager.active_workspace(op_space);
 
@@ -1796,14 +1784,13 @@ impl LayoutEngine {
         };
 
         let mut target_workspace_id = self.virtual_workspace_manager.active_workspace(target_space);
-        if target_workspace_id.is_none() {
-            if let Some((id, _)) =
+        if target_workspace_id.is_none()
+            && let Some((id, _)) =
                 self.virtual_workspace_manager.list_workspaces(target_space).first()
             {
                 self.virtual_workspace_manager.set_active_workspace(target_space, *id);
                 target_workspace_id = Some(*id);
             }
-        }
 
         let Some(target_workspace_id) = target_workspace_id else {
             return EventResponse::default();
@@ -1857,15 +1844,14 @@ impl LayoutEngine {
             self.focused_window = None;
         }
 
-        if let Some(active_ws) = self.virtual_workspace_manager.active_workspace(source_space) {
-            if active_ws == source_workspace_id {
+        if let Some(active_ws) = self.virtual_workspace_manager.active_workspace(source_space)
+            && active_ws == source_workspace_id {
                 self.virtual_workspace_manager.set_last_focused_window(
                     source_space,
                     source_workspace_id,
                     None,
                 );
             }
-        }
 
         self.virtual_workspace_manager.set_last_focused_window(
             target_space,
@@ -1924,24 +1910,23 @@ impl LayoutEngine {
     }
 
     pub fn broadcast_workspace_changed(&self, space_id: SpaceId) {
-        if let Some(ref broadcast_tx) = self.broadcast_tx {
-            if let Some((active_workspace_id, active_workspace_name)) =
+        if let Some(ref broadcast_tx) = self.broadcast_tx
+            && let Some((active_workspace_id, active_workspace_name)) =
                 self.active_workspace_id_and_name(space_id)
             {
                 let display_uuid = self.display_uuid_for_space(space_id);
-                let _ = broadcast_tx.send(BroadcastEvent::WorkspaceChanged {
+                broadcast_tx.send(BroadcastEvent::WorkspaceChanged {
                     workspace_id: active_workspace_id,
                     workspace_name: active_workspace_name.clone(),
                     space_id,
                     display_uuid,
                 });
             }
-        }
     }
 
     pub fn broadcast_windows_changed(&self, space_id: SpaceId) {
-        if let Some(ref broadcast_tx) = self.broadcast_tx {
-            if let Some((workspace_id, workspace_name)) =
+        if let Some(ref broadcast_tx) = self.broadcast_tx
+            && let Some((workspace_id, workspace_name)) =
                 self.active_workspace_id_and_name(space_id)
             {
                 let windows = self
@@ -1960,9 +1945,8 @@ impl LayoutEngine {
                     display_uuid,
                 };
 
-                let _ = broadcast_tx.send(event);
+                broadcast_tx.send(event);
             }
-        }
     }
 
     pub fn debug_log_workspace_stats(&self) {

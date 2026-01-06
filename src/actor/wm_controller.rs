@@ -231,7 +231,7 @@ impl WmController {
         match event {
             SystemWoke => self.events_tx.send(Event::SystemWoke),
             AppEventsRegistered => {
-                _ = self.event_tap_tx.send(event_tap::Request::SetEventProcessing(false));
+                self.event_tap_tx.send(event_tap::Request::SetEventProcessing(false));
 
                 let sender = self.sender.clone();
                 let event_tap_tx = self.event_tap_tx.clone();
@@ -265,7 +265,7 @@ impl WmController {
                 self.new_app(pid, info);
             }
             AppGloballyActivated(pid) => {
-                _ = self.event_tap_tx.send(event_tap::Request::EnforceHidden);
+                self.event_tap_tx.send(event_tap::Request::EnforceHidden);
 
                 if self.login_window_pid == Some(pid) {
                     info!("Login window activated");
@@ -389,7 +389,7 @@ impl WmController {
                     .collect();
                 self.events_tx
                     .send(Event::ScreenParametersChanged(snapshots, self.get_windows()));
-                _ = self
+                self
                     .event_tap_tx
                     .send(event_tap::Request::ScreenParametersChanged(frames, converter));
                 if let Some(tx) = &self.stack_line_tx {
@@ -631,22 +631,19 @@ impl WmController {
     }
 
     fn get_focused_space(&self) -> Option<SpaceId> {
-        if let Ok(point) = current_cursor_location() {
-            if let Some((idx, _)) =
+        if let Ok(point) = current_cursor_location()
+            && let Some((idx, _)) =
                 self.cur_frames.iter().enumerate().find(|(_, f)| f.contains(point))
             {
-                if let Some(space_opt) = self.cur_space.get(idx) {
-                    if let Some(space) = space_opt {
+                if let Some(space_opt) = self.cur_space.get(idx)
+                    && let Some(space) = space_opt {
                         return Some(*space);
                     }
-                }
-                if let Some(screen_id) = self.cur_screen_id.get(idx) {
-                    if let Some(space) = self.last_known_space_by_screen.get(screen_id).copied() {
+                if let Some(screen_id) = self.cur_screen_id.get(idx)
+                    && let Some(space) = self.last_known_space_by_screen.get(screen_id).copied() {
                         return Some(space);
                     }
-                }
             }
-        }
 
         let screen = NSScreen::mainScreen(self.mtm)?;
         let number = screen.get_number().ok()?;
@@ -689,32 +686,29 @@ impl WmController {
                     .flatten()
                     .or_else(|| self.last_known_space_by_screen.get(&screen_id).copied());
 
-                if let Some(previous_space) = previous_space {
-                    if previous_space != new_space {
+                if let Some(previous_space) = previous_space
+                    && previous_space != new_space {
                         debug!(
                             "transferring space activation: idx={}, screen_id={:?}, {:?} -> {:?}",
                             idx, screen_id, previous_space, new_space
                         );
                         self.transfer_space_activation(previous_space, new_space);
                     }
-                }
 
                 self.last_known_space_by_screen.insert(screen_id, new_space);
             }
         }
 
         for idx in self.cur_screen_id.len()..self.cur_space.len() {
-            if let Some(Some(new_space)) = self.cur_space.get(idx).copied() {
-                if let Some(previous_space) = previous_spaces.get(idx).copied().flatten() {
-                    if previous_space != new_space {
+            if let Some(Some(new_space)) = self.cur_space.get(idx).copied()
+                && let Some(previous_space) = previous_spaces.get(idx).copied().flatten()
+                    && previous_space != new_space {
                         debug!(
                             "transferring space activation (no screen_id): idx={}, {:?} -> {:?}",
                             idx, previous_space, new_space
                         );
                         self.transfer_space_activation(previous_space, new_space);
                     }
-                }
-            }
         }
 
         let default_disable = self.config.config.settings.default_disable;
@@ -725,23 +719,19 @@ impl WmController {
             };
 
             if default_disable {
-                if self.enabled_displays.contains(display_uuid) {
-                    if self.enabled_spaces.insert(*space) {
+                if self.enabled_displays.contains(display_uuid)
+                    && self.enabled_spaces.insert(*space) {
                         debug!(
                             "synced space {:?} to enabled_spaces from display {:?}",
                             space, display_uuid
                         );
                     }
-                }
-            } else {
-                if self.disabled_displays.contains(display_uuid) {
-                    if self.disabled_spaces.insert(*space) {
-                        debug!(
-                            "synced space {:?} to disabled_spaces from display {:?}",
-                            space, display_uuid
-                        );
-                    }
-                }
+            } else if self.disabled_displays.contains(display_uuid)
+            && self.disabled_spaces.insert(*space) {
+                debug!(
+                    "synced space {:?} to disabled_spaces from display {:?}",
+                    space, display_uuid
+                );
             }
         }
 
@@ -807,9 +797,9 @@ impl WmController {
             debug!("Hotkeys already registered; refreshing bindings");
         }
 
-        let bindings: Vec<(Hotkey, WmCommand)> = self.config.config.keys.iter().cloned().collect();
+        let bindings: Vec<(Hotkey, WmCommand)> = self.config.config.keys.to_vec();
 
-        _ = self.event_tap_tx.send(event_tap::Request::SetHotkeys(bindings));
+        self.event_tap_tx.send(event_tap::Request::SetHotkeys(bindings));
 
         self.hotkeys_registered = true;
     }
@@ -817,7 +807,7 @@ impl WmController {
     fn unregister_hotkeys(&mut self) {
         debug!("unregister_hotkeys");
         if self.hotkeys_registered {
-            _ = self.event_tap_tx.send(event_tap::Request::SetHotkeys(Vec::new()));
+            self.event_tap_tx.send(event_tap::Request::SetHotkeys(Vec::new()));
             self.hotkeys_registered = false;
         }
     }
@@ -826,7 +816,7 @@ impl WmController {
         let all_windows = sys::window_server::get_visible_windows_with_layer(None);
 
         let active_space_ids: Vec<SpaceId> =
-            self.active_spaces().into_iter().filter_map(|opt| opt).collect();
+            self.active_spaces().into_iter().flatten().collect();
         let fallback_space_ids: Vec<SpaceId> = self.cur_space.iter().copied().flatten().collect();
         let space_id_values: Vec<u64> = if active_space_ids.is_empty() {
             fallback_space_ids.iter().map(|space| space.get()).collect()
@@ -928,8 +918,8 @@ impl WmController {
                     "Exec command exited with status {}: {cmd:?} {args:?}",
                     output.status
                 );
-                error!("stdout: {}", String::from_utf8_lossy(&*output.stdout));
-                error!("stderr: {}", String::from_utf8_lossy(&*output.stderr));
+                error!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+                error!("stderr: {}", String::from_utf8_lossy(&output.stderr));
             }
         });
     }
@@ -938,7 +928,7 @@ impl WmController {
 impl ExecCmd {
     fn as_array(&self) -> Cow<'_, [String]> {
         match self {
-            ExecCmd::Array(vec) => Cow::Borrowed(&*vec),
+            ExecCmd::Array(vec) => Cow::Borrowed(vec),
             ExecCmd::String(s) => s.split(' ').map(|s| s.to_owned()).collect::<Vec<_>>().into(),
         }
     }

@@ -25,6 +25,12 @@ pub trait CliExecutor: Send + Sync + 'static {
 
 pub struct DefaultCliExecutor;
 
+impl Default for DefaultCliExecutor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DefaultCliExecutor {
     pub fn new() -> Self {
         Self {}
@@ -100,8 +106,7 @@ impl CliExecutor for DefaultCliExecutor {
             Ok(s) => s,
             Err(e) => {
                 error!("Failed to serialize event for CLI executor: {}", e);
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                return Err(std::io::Error::other(
                     "serialization error",
                 ));
             }

@@ -165,15 +165,14 @@ impl StackLine {
         } else if new_enabled {
             let new_config = self.indicator_config();
             for (node_id, indicator) in &self.indicators {
-                if let Some(group_data) = indicator.group_data() {
-                    if let Err(err) = indicator.update(new_config, group_data) {
+                if let Some(group_data) = indicator.group_data()
+                    && let Err(err) = indicator.update(new_config, group_data) {
                         tracing::warn!(
                             ?err,
                             ?node_id,
                             "failed to update stack line indicator with new config"
                         );
                     }
-                }
             }
         }
 

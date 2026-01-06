@@ -25,7 +25,7 @@ impl Ignored {
 
     #[inline]
     pub fn is_ignored(&self, event: CGSEventType, wsid: u32) -> bool {
-        self.by_event.get(&event.into()).map_or(false, |set| set.contains(&wsid))
+        self.by_event.get(&event.into()).is_some_and(|set| set.contains(&wsid))
     }
 
     pub fn with_added(&self, event: CGSEventType, wsid: u32) -> Arc<Ignored> {
@@ -97,7 +97,7 @@ impl WindowNotify {
             events_tx,
             requests_rx: Some(requests_rx),
             subscribed: HashSet::default(),
-            initial_events: initial_events.iter().copied().collect(),
+            initial_events: initial_events.to_vec(),
             tx_store,
         }
     }

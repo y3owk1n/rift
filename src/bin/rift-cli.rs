@@ -464,10 +464,7 @@ fn build_execute_request(execute: ExecuteCommands) -> Result<RiftRequest, String
     }
 
     let maybe_config_json = match &rift_command {
-        RiftCommand::Config(cfg_cmd) => match serde_json::to_string(cfg_cmd) {
-            Ok(s) => Some(s),
-            Err(_) => None,
-        },
+        RiftCommand::Config(cfg_cmd) => serde_json::to_string(cfg_cmd).ok(),
         _ => None,
     };
 

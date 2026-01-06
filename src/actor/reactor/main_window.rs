@@ -17,8 +17,8 @@ struct AppState {
 impl MainWindowTracker {
     #[must_use]
     pub fn handle_event(&mut self, event: &Event) -> Option<WindowId> {
-        let (event_pid, quiet_edge) = match event {
-            &Event::ApplicationLaunched {
+        let (event_pid, quiet_edge) = match *event {
+            Event::ApplicationLaunched {
                 pid, is_frontmost, main_window, ..
             } => {
                 self.apps.insert(
@@ -31,44 +31,43 @@ impl MainWindowTracker {
                 );
                 (pid, Quiet::No)
             }
-            &Event::ApplicationThreadTerminated(pid) => {
+            Event::ApplicationThreadTerminated(pid) => {
                 self.apps.remove(&pid);
                 return None;
             }
-            &Event::ApplicationActivated(pid, quiet) => {
+            Event::ApplicationActivated(pid, quiet) => {
                 let app = self.apps.get_mut(&pid)?;
                 app.is_frontmost = true;
                 app.frontmost_is_quiet = quiet;
                 (pid, quiet)
             }
-            &Event::ApplicationDeactivated(pid) => {
+            Event::ApplicationDeactivated(pid) => {
                 let app = self.apps.get_mut(&pid)?;
                 app.is_frontmost = false;
                 return None;
             }
-            &Event::ApplicationGloballyActivated(pid) => {
+            Event::ApplicationGloballyActivated(pid) => {
                 self.global_frontmost = Some(pid);
                 let Some(app) = self.apps.get(&pid) else { return None };
                 (pid, app.frontmost_is_quiet)
             }
-            &Event::ApplicationGloballyDeactivated(pid) => {
+            Event::ApplicationGloballyDeactivated(pid) => {
                 if self.global_frontmost == Some(pid) {
                     self.global_frontmost = None;
                 }
                 return None;
             }
-            &Event::ApplicationMainWindowChanged(pid, wid, quiet) => {
+            Event::ApplicationMainWindowChanged(pid, wid, quiet) => {
                 let app = self.apps.get_mut(&pid)?;
                 app.main_window = wid;
                 (pid, quiet)
             }
             _ => return None,
         };
-        if Some(event_pid) == self.global_frontmost && quiet_edge == Quiet::No {
-            if let Some(wid) = self.main_window() {
+        if Some(event_pid) == self.global_frontmost && quiet_edge == Quiet::No
+            && let Some(wid) = self.main_window() {
                 return Some(wid);
             }
-        }
         None
     }
 

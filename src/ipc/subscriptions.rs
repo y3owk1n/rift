@@ -30,6 +30,12 @@ pub struct ServerState {
 
 pub type SharedServerState = Arc<RwLock<ServerState>>;
 
+impl Default for ServerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ServerState {
     pub fn new() -> Self {
         Self {
@@ -81,15 +87,14 @@ impl ServerState {
             }
         }
 
-        if removed {
-            if let Some(mut entry) = self.subscriptions_by_event.get_mut(&event) {
+        if removed
+            && let Some(mut entry) = self.subscriptions_by_event.get_mut(&event) {
                 entry.retain(|c| c != &client_port);
                 if entry.is_empty() {
                     drop(entry);
                     self.subscriptions_by_event.remove(&event);
                 }
             }
-        }
     }
 
     pub fn subscribe_cli(&self, event: String, command: String, args: Vec<String>) {
@@ -101,7 +106,7 @@ impl ServerState {
         let subscription = CliSubscription { command, args };
 
         let mut guard = self.cli_subscriptions.lock();
-        let list = guard.entry(event.clone()).or_insert_with(Vec::new);
+        let list = guard.entry(event.clone()).or_default();
         let is_duplicate = list
             .iter()
             .any(|s| s.command == subscription.command && s.args == subscription.args);

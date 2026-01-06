@@ -155,7 +155,7 @@ impl SystemEventHandler {
                 space,
                 app_info.as_ref().and_then(|a| a.bundle_id.as_deref()),
                 app_info.as_ref().and_then(|a| a.localized_name.as_deref()),
-                window_info.and_then(|w| Some(w.title.as_str())),
+                window_info.map(|w| w.title.as_str()),
                 window_info.and_then(|w| w.ax_role.as_deref()),
                 window_info.and_then(|w| w.ax_subrole.as_deref()),
             );
@@ -173,12 +173,12 @@ impl SystemEventHandler {
 
     pub fn handle_raise_completed(reactor: &mut Reactor, window_id: WindowId, sequence_id: u64) {
         let msg = raise_manager::Event::RaiseCompleted { window_id, sequence_id };
-        _ = reactor.communication_manager.raise_manager_tx.send(msg);
+        reactor.communication_manager.raise_manager_tx.send(msg);
     }
 
     pub fn handle_raise_timeout(reactor: &mut Reactor, sequence_id: u64) {
         let msg = raise_manager::Event::RaiseTimeout { sequence_id };
-        _ = reactor.communication_manager.raise_manager_tx.send(msg);
+        reactor.communication_manager.raise_manager_tx.send(msg);
     }
 
     pub fn handle_register_wm_sender(reactor: &mut Reactor, sender: WmSender) {

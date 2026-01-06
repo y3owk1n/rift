@@ -216,14 +216,13 @@ impl EventTap {
             return;
         }
 
-        if this.config.settings.mouse_hides_on_focus {
-            if let Err(e) = window_server::allow_hide_mouse() {
+        if this.config.settings.mouse_hides_on_focus
+            && let Err(e) = window_server::allow_hide_mouse() {
                 error!(
                     "Could not enable mouse hiding: {e:?}. \
                     mouse_hides_on_focus will have no effect."
                 );
             }
-        }
 
         while let Some((span, request)) = requests_rx.recv().await {
             let _ = span.enter();
@@ -250,11 +249,10 @@ impl EventTap {
                 }
             }
             Request::EnforceHidden => {
-                if state.hidden {
-                    if let Err(e) = event::hide_mouse() {
+                if state.hidden
+                    && let Err(e) = event::hide_mouse() {
                         warn!("Failed to hide mouse: {e:?}");
                     }
-                }
             }
             Request::ScreenParametersChanged(frames, converter) => {
                 state.screens = frames;
@@ -296,13 +294,12 @@ impl EventTap {
 
     fn on_event(self: &Rc<Self>, event_type: CGEventType, event: &CGEvent) -> bool {
         if event_type.0 == NSEventType::Gesture.0 as u32 {
-            if let Some(handler) = &self.swipe {
-                if let Some(nsevent) = NSEvent::eventWithCGEvent(event)
+            if let Some(handler) = &self.swipe
+                && let Some(nsevent) = NSEvent::eventWithCGEvent(event)
                     && nsevent.r#type() == NSEventType::Gesture
                 {
                     self.handle_gesture_event(handler, &nsevent);
                 }
-            }
             return true;
         }
 
@@ -340,7 +337,7 @@ impl EventTap {
         }
         match event_type {
             CGEventType::RightMouseUp | CGEventType::LeftMouseUp => {
-                _ = self.events_tx.send(Event::MouseUp);
+                self.events_tx.send(Event::MouseUp);
             }
             CGEventType::MouseMoved
                 if self.config.settings.focus_follows_mouse
@@ -349,7 +346,7 @@ impl EventTap {
             {
                 let loc = CGEvent::location(Some(event));
                 if let Some(wsid) = state.track_mouse_move(loc) {
-                    _ = self.events_tx.send(Event::MouseMovedOverWindow(wsid));
+                    self.events_tx.send(Event::MouseMovedOverWindow(wsid));
                 }
             }
             _ => (),
@@ -404,8 +401,8 @@ impl EventTap {
 
             if !ended && t.r#type() == NSTouchType::Indirect {
                 let pos = t.normalizedPosition();
-                sum_x += pos.x as f64;
-                sum_y += pos.y as f64;
+                sum_x += pos.x;
+                sum_y += pos.y;
                 active_count += 1;
             }
         }
@@ -494,8 +491,8 @@ impl EventTap {
             }
         }
 
-        if event_type == CGEventType::KeyDown {
-            if let Some(key_code) = key_code_opt {
+        if event_type == CGEventType::KeyDown
+            && let Some(key_code) = key_code_opt {
                 let hotkey = Hotkey::new(
                     modifiers_from_flags_with_keys(state.current_flags, &state.pressed_keys),
                     key_code,
@@ -515,7 +512,6 @@ impl EventTap {
                     }
                 }
             }
-        }
 
         true
     }
@@ -666,7 +662,7 @@ fn build_event_mask(swipe_enabled: bool) -> CGEventMask {
     }
     if swipe_enabled {
         // NSEventType::Gesture is an NSEventType — it maps via .0
-        *&mut m |= 1u64 << (NSEventType::Gesture.0 as u64);
+        m |= 1u64 << (NSEventType::Gesture.0 as u64);
     }
     m
 }

@@ -100,15 +100,14 @@ impl RaiseManager {
                 // Handle timeout - send timeout event to reactor
                 _ = timeout_timer.next() => {
                     // Send timeout event for the active sequence
-                    if let Some(sequence) = &mut raise_manager.active_sequence {
-                        if sequence_timeout(sequence) <= Duration::ZERO {
+                    if let Some(sequence) = &mut raise_manager.active_sequence
+                        && sequence_timeout(sequence) <= Duration::ZERO {
                             // Send timeout event to reactor; this will get
                             // relayed back to us. We send these events through
                             // the reactor so that we can record/replay them.
                             sequence.timed_out = true;
                             events_tx.send(reactor::Event::RaiseTimeout { sequence_id: sequence.sequence_id });
                         }
-                    }
                 }
             }
         }
@@ -146,18 +145,17 @@ impl RaiseManager {
                 trace!("Raise completed for {:?} in sequence {}", window_id, sequence_id);
 
                 // Remove this window from the active sequence's pending raises
-                if let Some(sequence) = &mut self.active_sequence {
-                    if sequence.sequence_id == sequence_id {
+                if let Some(sequence) = &mut self.active_sequence
+                    && sequence.sequence_id == sequence_id {
                         sequence.pending_raises.remove(&window_id);
                     }
-                }
             }
             Event::RaiseTimeout { sequence_id } => {
                 trace!("Raise sequence {} timed out", sequence_id);
 
                 // Clear pending raises for the active sequence if it matches
-                if let Some(sequence) = &mut self.active_sequence {
-                    if sequence.sequence_id == sequence_id {
+                if let Some(sequence) = &mut self.active_sequence
+                    && sequence.sequence_id == sequence_id {
                         warn!(
                             "Sequence {} timed out, clearing pending raises: {:?}",
                             sequence_id, sequence.pending_raises
@@ -165,7 +163,6 @@ impl RaiseManager {
                         sequence.pending_raises.clear();
                         sequence.raise_token.cancel();
                     }
-                }
             }
         }
 
@@ -181,12 +178,11 @@ impl RaiseManager {
     }
 
     fn process_queued_responses(&mut self) -> bool {
-        if self.active_sequence.is_none() {
-            if let Some(queued) = self.queued_sequences.pop_front() {
+        if self.active_sequence.is_none()
+            && let Some(queued) = self.queued_sequences.pop_front() {
                 self.start_new_sequence(queued);
                 return true;
             }
-        }
         false
     }
 
@@ -293,7 +289,7 @@ impl RaiseManager {
                 {
                     // For now we don't wait for the last window to be raised;
                     // send the warp as soon as we send the raise request.
-                    _ = event_tap_tx.send(event_tap::Request::Warp(warp));
+                    event_tap_tx.send(event_tap::Request::Warp(warp));
                 }
             }
         }

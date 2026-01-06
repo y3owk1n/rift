@@ -78,7 +78,7 @@ impl AXUIElement {
         let mut data = [0u8; BUFSIZE];
 
         let pid_bytes = (wid.pid as u32).to_ne_bytes();
-        data[0x0..0x0 + pid_bytes.len()].copy_from_slice(&pid_bytes);
+        data[0x0..pid_bytes.len()].copy_from_slice(&pid_bytes);
 
         let magic_bytes = MAGIC.to_ne_bytes();
         data[0x8..0x8 + magic_bytes.len()].copy_from_slice(&magic_bytes);

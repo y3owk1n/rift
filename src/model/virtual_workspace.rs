@@ -119,16 +119,13 @@ impl VirtualWorkspace {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default)]
 pub enum HideCorner {
     BottomLeft,
+    #[default]
     BottomRight,
 }
 
-impl Default for HideCorner {
-    fn default() -> Self {
-        HideCorner::BottomRight
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VirtualWorkspaceManager {
@@ -260,11 +257,10 @@ impl VirtualWorkspaceManager {
                 compiled_substring_regex,
             });
 
-            if let Some(ref bundle_id) = rule.app_id {
-                if !bundle_id.is_empty() {
+            if let Some(ref bundle_id) = rule.app_id
+                && !bundle_id.is_empty() {
                     self.app_rules_by_bundle_id.insert(bundle_id.to_lowercase(), idx);
                 }
-            }
         }
     }
 
@@ -310,11 +306,10 @@ impl VirtualWorkspaceManager {
         // should be authoritative.
         if let Some(existing) = self.workspaces_by_space.remove(&new_space) {
             for ws_id in existing {
-                if let Some(ws) = self.workspaces.get(ws_id) {
-                    if ws.space == new_space {
+                if let Some(ws) = self.workspaces.get(ws_id)
+                    && ws.space == new_space {
                         self.workspaces.remove(ws_id);
                     }
-                }
             }
         }
         self.active_workspace_per_space.remove(&new_space);
@@ -433,7 +428,9 @@ impl VirtualWorkspaceManager {
         trace_misc("set_active_workspace", || {
             let active = self.active_workspace_per_space.get(&space).map(|tuple| tuple.1);
 
-            let result = if self.workspaces.contains_key(workspace_id)
+            
+
+            if self.workspaces.contains_key(workspace_id)
                 && self.workspaces.get(workspace_id).map(|w| w.space) == Some(space)
             {
                 self.active_workspace_per_space.insert(space, (active, workspace_id));
@@ -444,9 +441,7 @@ impl VirtualWorkspaceManager {
                     workspace_id, space
                 );
                 false
-            };
-
-            result
+            }
         })
     }
 
@@ -510,7 +505,7 @@ impl VirtualWorkspaceManager {
 
         for _ in 0..fallback_ids.len() {
             let id = fallback_ids[i];
-            if self.workspaces.get(id).map_or(false, |ws| !ws.windows.is_empty()) {
+            if self.workspaces.get(id).is_some_and(|ws| !ws.windows.is_empty()) {
                 return Some(id);
             }
             i = dir.step(i, fallback_ids.len());
@@ -648,20 +643,18 @@ impl VirtualWorkspaceManager {
 
     /// Gets all windows in the active virtual workspace for a given native space.
     pub fn windows_in_active_workspace(&self, space: SpaceId) -> Vec<WindowId> {
-        if let Some(workspace_id) = self.active_workspace(space) {
-            if let Some(workspace) = self.workspaces.get(workspace_id) {
+        if let Some(workspace_id) = self.active_workspace(space)
+            && let Some(workspace) = self.workspaces.get(workspace_id) {
                 return workspace.windows().collect();
             }
-        }
         Vec::new()
     }
 
     pub fn is_window_in_active_workspace(&self, space: SpaceId, window_id: WindowId) -> bool {
-        if let Some(active_workspace_id) = self.active_workspace(space) {
-            if let Some(window_workspace_id) = self.window_to_workspace.get(&(space, window_id)) {
+        if let Some(active_workspace_id) = self.active_workspace(space)
+            && let Some(window_workspace_id) = self.window_to_workspace.get(&(space, window_id)) {
                 return *window_workspace_id == active_workspace_id;
             }
-        }
         true
     }
 
@@ -778,11 +771,10 @@ impl VirtualWorkspaceManager {
         workspace_id: VirtualWorkspaceId,
         window_id: Option<WindowId>,
     ) {
-        if self.workspaces.get(workspace_id).map(|w| w.space) == Some(space) {
-            if let Some(workspace) = self.workspaces.get_mut(workspace_id) {
+        if self.workspaces.get(workspace_id).map(|w| w.space) == Some(space)
+            && let Some(workspace) = self.workspaces.get_mut(workspace_id) {
                 workspace.set_last_focused(window_id);
             }
-        }
     }
 
     pub fn last_focused_window(
@@ -926,13 +918,12 @@ impl VirtualWorkspaceManager {
         space: SpaceId,
         workspace_id: VirtualWorkspaceId,
     ) -> Vec<WindowId> {
-        if let Some(workspace) = self.workspaces.get(workspace_id) {
-            if workspace.space == space {
+        if let Some(workspace) = self.workspaces.get(workspace_id)
+            && workspace.space == space {
                 let mut windows: Vec<WindowId> = workspace.windows().collect();
                 windows.sort_unstable_by_key(|wid| wid.idx.get());
                 return windows;
             }
-        }
         Vec::new()
     }
 
@@ -1024,12 +1015,10 @@ impl VirtualWorkspaceManager {
                 } else {
                     self.get_default_workspace(space)?
                 }
+            } else if let Some(existing_ws) = existing_assignment {
+                existing_ws
             } else {
-                if let Some(existing_ws) = existing_assignment {
-                    existing_ws
-                } else {
-                    self.get_default_workspace(space)?
-                }
+                self.get_default_workspace(space)?
             };
 
             if let Some(existing_ws) = existing_assignment {
@@ -1199,22 +1188,22 @@ impl VirtualWorkspaceManager {
             }
 
             let mut score = 0usize;
-            if rule.app_id.as_ref().map_or(false, |s| !s.is_empty()) {
+            if rule.app_id.as_ref().is_some_and(|s| !s.is_empty()) {
                 score += 1;
             }
-            if rule.app_name.as_ref().map_or(false, |s| !s.is_empty()) {
+            if rule.app_name.as_ref().is_some_and(|s| !s.is_empty()) {
                 score += 1;
             }
-            if rule.title_regex.as_ref().map_or(false, |s| !s.is_empty()) {
+            if rule.title_regex.as_ref().is_some_and(|s| !s.is_empty()) {
                 score += 1;
             }
-            if rule.title_substring.as_ref().map_or(false, |s| !s.is_empty()) {
+            if rule.title_substring.as_ref().is_some_and(|s| !s.is_empty()) {
                 score += 1;
             }
-            if rule.ax_role.as_ref().map_or(false, |s| !s.is_empty()) {
+            if rule.ax_role.as_ref().is_some_and(|s| !s.is_empty()) {
                 score += 1;
             }
-            if rule.ax_subrole.as_ref().map_or(false, |s| !s.is_empty()) {
+            if rule.ax_subrole.as_ref().is_some_and(|s| !s.is_empty()) {
                 score += 1;
             }
 
@@ -1231,11 +1220,10 @@ impl VirtualWorkspaceManager {
 
         let mut groups: HashMap<&str, Vec<&(usize, &AppWorkspaceRule, usize)>> = HashMap::default();
         for entry in &matches {
-            if let Some(ref app_id) = entry.1.app_id {
-                if !app_id.is_empty() {
+            if let Some(ref app_id) = entry.1.app_id
+                && !app_id.is_empty() {
                     groups.entry(app_id.as_str()).or_default().push(entry);
                 }
-            }
         }
 
         if !groups.is_empty() {
@@ -1254,8 +1242,8 @@ impl VirtualWorkspaceManager {
                 }
             }
 
-            if let Some(key) = candidate_group_key {
-                if let Some(vec_entries) = groups.get(key) {
+            if let Some(key) = candidate_group_key
+                && let Some(vec_entries) = groups.get(key) {
                     let best = vec_entries.iter().copied().max_by(|a, b| match a.2.cmp(&b.2) {
                         std::cmp::Ordering::Equal => b.0.cmp(&a.0), // prefer earlier-defined rule on tie
                         ord => ord,
@@ -1264,7 +1252,6 @@ impl VirtualWorkspaceManager {
                         return Some(best_entry.1);
                     }
                 }
-            }
         }
 
         let best_overall = matches.iter().max_by(|a, b| match a.2.cmp(&b.2) {

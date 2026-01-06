@@ -193,7 +193,7 @@ impl VirtualWorkspaceSettings {
         let mut seen_ax_subroles = crate::common::collections::HashSet::default();
 
         for (index, rule) in self.app_rules.iter().enumerate() {
-            let app_id_empty = rule.app_id.as_ref().map_or(true, |id| id.is_empty());
+            let app_id_empty = rule.app_id.as_ref().is_none_or(|id| id.is_empty());
             if app_id_empty
                 && rule.app_name.is_none()
                 && rule.title_regex.is_none()
@@ -207,16 +207,14 @@ impl VirtualWorkspaceSettings {
                 ));
             }
 
-            if let Some(ref workspace) = rule.workspace {
-                if let WorkspaceSelector::Index(idx) = workspace {
-                    if *idx >= self.default_workspace_count {
+            if let Some(ref workspace) = rule.workspace
+                && let WorkspaceSelector::Index(idx) = workspace
+                    && *idx >= self.default_workspace_count {
                         issues.push(format!(
                             "App rule {} references workspace {} but only {} workspaces will be created",
                             index, idx, self.default_workspace_count
                         ));
                     }
-                }
-            }
 
             if let Some(ref app_id) = rule.app_id {
                 if !app_id.is_empty() && !app_id.contains('.') {
@@ -236,11 +234,10 @@ impl VirtualWorkspaceSettings {
                 }
             }
 
-            if let Some(ref app_name) = rule.app_name {
-                if !seen_app_names.insert(app_name) {
+            if let Some(ref app_name) = rule.app_name
+                && !seen_app_names.insert(app_name) {
                     issues.push(format!("Duplicate app_name '{}' in rule {}", app_name, index));
                 }
-            }
 
             if let Some(ref title_re) = rule.title_regex {
                 if title_re.is_empty() {
@@ -749,8 +746,8 @@ impl GapSettings {
             inner: self.inner.clone(),
             per_display: HashMap::default(),
         };
-        if let Some(uuid) = display_uuid {
-            if let Some(overrides) = self.per_display.get(uuid) {
+        if let Some(uuid) = display_uuid
+            && let Some(overrides) = self.per_display.get(uuid) {
                 if let Some(outer_override) = &overrides.outer {
                     resolved.outer = outer_override.clone();
                 }
@@ -758,7 +755,6 @@ impl GapSettings {
                     resolved.inner = inner_override.clone();
                 }
             }
-        }
         resolved
     }
 }
@@ -907,11 +903,10 @@ impl Config {
         };
 
         let toml_string = toml::to_string_pretty(&config_file)?;
-        if let Some(parent) = path.parent() {
-            if !parent.as_os_str().is_empty() {
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty() {
                 std::fs::create_dir_all(parent)?;
             }
-        }
         std::fs::write(path, toml_string.as_bytes())?;
 
         Ok(())
@@ -1060,14 +1055,13 @@ impl Config {
             }
         }
 
-        if let Some(unknown_pos) = err.find("unknown") {
-            if let Some(backtick_pos) = err[unknown_pos..].find('`') {
+        if let Some(unknown_pos) = err.find("unknown")
+            && let Some(backtick_pos) = err[unknown_pos..].find('`') {
                 let rest = &err[unknown_pos + backtick_pos + 1..];
                 if let Some(end) = rest.find('`') {
                     return Some(rest[..end].to_string());
                 }
             }
-        }
         None
     }
 
@@ -1145,7 +1139,7 @@ impl Config {
     fn parse(buf: &str) -> anyhow::Result<Config> {
         // Attempt to deserialize. If it fails, and the error indicates an unknown enum
         // variant, attempt to provide a helpful suggestion.
-        match toml::from_str::<ConfigFile>(&buf) {
+        match toml::from_str::<ConfigFile>(buf) {
             Ok(c) => {
                 let mut keys = Vec::new();
                 for (key, cmd) in c.keys {

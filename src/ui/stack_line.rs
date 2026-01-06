@@ -185,11 +185,10 @@ impl GroupIndicatorWindow {
 
         self.update_layers();
 
-        if let Some(old_index) = old_selected {
-            if old_index != group_data.selected_index {
+        if let Some(old_index) = old_selected
+            && old_index != group_data.selected_index {
                 self.animate_selection_change(group_data.selected_index);
             }
-        }
 
         self.present();
         self.cgs_window.order_above(None)
@@ -302,7 +301,7 @@ impl GroupIndicatorWindow {
     }
 
     fn ensure_separator_layers(&self, total_count: usize) {
-        let needed_count = if total_count > 1 { total_count - 1 } else { 0 };
+        let needed_count = total_count.saturating_sub(1);
 
         let mut state = self.state.borrow_mut();
 

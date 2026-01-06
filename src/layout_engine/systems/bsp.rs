@@ -41,8 +41,8 @@ impl BspLayoutSystem {
         let mut current = from_leaf;
 
         while let Some(parent) = current.parent(&self.tree.map) {
-            if let Some(NodeKind::Split { orientation, .. }) = self.kind.get(parent) {
-                if *orientation == direction.orientation() {
+            if let Some(NodeKind::Split { orientation, .. }) = self.kind.get(parent)
+                && *orientation == direction.orientation() {
                     let children: Vec<_> = parent.children(&self.tree.map).collect();
                     if children.len() == 2 {
                         let is_first = children[0] == current;
@@ -68,7 +68,6 @@ impl BspLayoutSystem {
                         }
                     }
                 }
-            }
             current = parent;
         }
 
@@ -369,11 +368,10 @@ impl BspLayoutSystem {
 
     fn remove_window_internal(&mut self, layout: crate::layout_engine::LayoutId, wid: WindowId) {
         if let Some(&node_id) = self.window_to_node.get(&wid) {
-            if let Some(state) = self.layouts.get(layout).copied() {
-                if !self.belongs_to_layout(state, node_id) {
+            if let Some(state) = self.layouts.get(layout).copied()
+                && !self.belongs_to_layout(state, node_id) {
                     return;
                 }
-            }
             if let Some(NodeKind::Leaf { window, .. }) = self.kind.get_mut(node_id) {
                 *window = None;
             }
@@ -420,7 +418,7 @@ impl BspLayoutSystem {
             }
             Some(NodeKind::Split { orientation, ratio }) => match orientation {
                 Orientation::Horizontal => {
-                    let gap = gaps.inner.horizontal as f64;
+                    let gap = gaps.inner.horizontal;
                     let total = rect.size.width;
                     let available = (total - gap).max(0.0);
                     let first_w_f = available * (*ratio as f64);
@@ -440,7 +438,7 @@ impl BspLayoutSystem {
                     }
                 }
                 Orientation::Vertical => {
-                    let gap = gaps.inner.vertical as f64;
+                    let gap = gaps.inner.vertical;
                     let total = rect.size.height;
                     let available = (total - gap).max(0.0);
                     let first_h_f = available * (*ratio as f64);
@@ -849,12 +847,11 @@ impl LayoutSystem for BspLayoutSystem {
 
     fn visible_windows_under_selection(&self, layout: LayoutId) -> Vec<WindowId> {
         let mut out = Vec::new();
-        if let Some(sel) = self.selection_of_layout(layout) {
-            if self.kind.get(sel).is_some() {
+        if let Some(sel) = self.selection_of_layout(layout)
+            && self.kind.get(sel).is_some() {
                 let leaf = self.descend_to_leaf(sel);
                 self.collect_windows_under(leaf, &mut out);
             }
-        }
 
         out
     }
@@ -960,18 +957,15 @@ impl LayoutSystem for BspLayoutSystem {
             for w in under.into_iter().filter(|w| w.pid == pid) {
                 current_set.insert(w);
                 if !desired_set.contains(&w) {
-                    if let Some(&node) = self.window_to_node.get(&w) {
-                        if let Some(NodeKind::Leaf {
+                    if let Some(&node) = self.window_to_node.get(&w)
+                        && let Some(NodeKind::Leaf {
                             fullscreen,
                             fullscreen_within_gaps,
                             ..
                         }) = self.kind.get(node)
-                        {
-                            if *fullscreen || *fullscreen_within_gaps {
+                            && (*fullscreen || *fullscreen_within_gaps) {
                                 continue; // keep fullscreen node in tree
                             }
-                        }
-                    }
                     self.remove_window_internal(layout, w);
                 }
             }
@@ -994,11 +988,10 @@ impl LayoutSystem for BspLayoutSystem {
     }
 
     fn contains_window(&self, layout: LayoutId, wid: WindowId) -> bool {
-        if let Some(&node) = self.window_to_node.get(&wid) {
-            if let Some(state) = self.layouts.get(layout).copied() {
+        if let Some(&node) = self.window_to_node.get(&wid)
+            && let Some(state) = self.layouts.get(layout).copied() {
                 return self.belongs_to_layout(state, node);
             }
-        }
         false
     }
 
@@ -1028,8 +1021,8 @@ impl LayoutSystem for BspLayoutSystem {
         screen: CGRect,
         gaps: &crate::common::config::GapSettings,
     ) {
-        if let Some(&node) = self.window_to_node.get(&wid) {
-            if let Some(state) = self.layouts.get(layout).copied() {
+        if let Some(&node) = self.window_to_node.get(&wid)
+            && let Some(state) = self.layouts.get(layout).copied() {
                 if !self.belongs_to_layout(state, node) {
                     return;
                 }
@@ -1056,7 +1049,6 @@ impl LayoutSystem for BspLayoutSystem {
                     }
                 }
             }
-        }
     }
 
     fn move_selection(&mut self, layout: LayoutId, direction: Direction) -> bool {
@@ -1169,19 +1161,16 @@ impl LayoutSystem for BspLayoutSystem {
 
         let sel = self.tree.data.selection.current_selection(state.root);
         let target = self.descend_to_leaf(sel);
-        match self.kind.get(target).cloned() {
-            Some(NodeKind::Leaf { window, .. }) => {
-                let left = self.make_leaf(window);
-                let right = self.make_leaf(None);
-                if let Some(w) = window {
-                    self.window_to_node.insert(w, left);
-                }
-                self.kind.insert(target, NodeKind::Split { orientation, ratio: 0.5 });
-                left.detach(&mut self.tree).push_back(target);
-                right.detach(&mut self.tree).push_back(target);
-                self.tree.data.selection.select(&self.tree.map, right);
+        if let Some(NodeKind::Leaf { window, .. }) = self.kind.get(target).cloned() {
+            let left = self.make_leaf(window);
+            let right = self.make_leaf(None);
+            if let Some(w) = window {
+                self.window_to_node.insert(w, left);
             }
-            _ => {}
+            self.kind.insert(target, NodeKind::Split { orientation, ratio: 0.5 });
+            left.detach(&mut self.tree).push_back(target);
+            right.detach(&mut self.tree).push_back(target);
+            self.tree.data.selection.select(&self.tree.map, right);
         }
     }
 

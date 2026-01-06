@@ -116,7 +116,7 @@ impl WindowQuery {
     }
 
     #[inline]
-    pub fn advance<'a>(&'a self) -> Option<&'a Self> {
+    pub fn advance(&self) -> Option<&Self> {
         if unsafe { SLSWindowIteratorAdvance(self.iter) } {
             return Some(self);
         }
@@ -246,7 +246,7 @@ pub fn window_spaces(id: WindowServerId) -> Vec<crate::sys::screen::SpaceId> {
         .iter()
         .filter_map(|num| num.as_i64())
         .filter_map(|value| u64::try_from(value).ok())
-        .filter_map(|value| (value != 0).then(|| crate::sys::screen::SpaceId::new(value)))
+        .filter(|&value| value != 0 ).map(crate::sys::screen::SpaceId::new)
         .collect()
 }
 
@@ -256,7 +256,7 @@ pub fn window_space(id: WindowServerId) -> Option<crate::sys::screen::SpaceId> {
 
 pub fn window_is_ordered_in(id: WindowServerId) -> bool {
     let mut ordered: u8 = 0;
-    if let Ok(_) = cg_ok(unsafe { SLSWindowIsOrderedIn(*G_CONNECTION, id.as_u32(), &mut ordered) })
+    if cg_ok(unsafe { SLSWindowIsOrderedIn(*G_CONNECTION, id.as_u32(), &mut ordered) }).is_ok()
     {
         return ordered != 0;
     }
@@ -339,7 +339,7 @@ pub fn get_windows(ids: &[WindowServerId]) -> Vec<WindowServerInfo> {
     while query.advance().is_some() {
         out.push(WindowServerInfo {
             id: WindowServerId::new(query.window_id()),
-            pid: query.pid() as i32,
+            pid: query.pid(),
             layer: query.level(),
             frame: query.bounds(),
         });
@@ -387,7 +387,7 @@ pub fn get_window_at_point(mut point: CGPoint) -> Option<WindowServerId> {
                 &mut window_cid,
             );
         }
-        (window_id != 0).then(|| WindowServerId(window_id))
+        (window_id != 0).then_some(WindowServerId(window_id))
     }
 }
 
@@ -432,7 +432,7 @@ fn iterator_window_suitable(iterator: *mut CFType) -> bool {
     {
         return true;
     }
-    return false;
+    false
 }
 
 // credit to yabai
@@ -605,14 +605,13 @@ pub fn window_space_id(cid: i32, wid: u32) -> u64 {
     if !space_list_ref.is_null() {
         let spaces_cf: CFRetained<CFArray<CFNumber>> =
             unsafe { CFRetained::from_raw(NonNull::new_unchecked(space_list_ref)) };
-        if spaces_cf.len() > 0 {
-            if let Some(id_ref) = spaces_cf.get(0) {
+        if !spaces_cf.is_empty()
+            && let Some(id_ref) = spaces_cf.get(0) {
                 let n: &CFNumber = id_ref.as_ref();
                 if let Some(v) = n.as_i64() {
                     sid = v as u64;
                 }
             }
-        }
     }
 
     if sid != 0 {

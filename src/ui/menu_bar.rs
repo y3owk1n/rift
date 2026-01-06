@@ -47,7 +47,7 @@ impl MenuIcon {
         let status_item = status_bar.statusItemWithLength(NSVariableStatusItemLength);
         let view = MenuIconView::new(mtm);
         if let Some(btn) = status_item.button(mtm) {
-            btn.addSubview(&*view);
+            btn.addSubview(&view);
             view.setFrameSize(NSSize::new(0.0, 0.0));
             status_item.setVisible(true);
         }

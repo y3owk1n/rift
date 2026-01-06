@@ -70,11 +70,10 @@ impl ConfigWatcher {
         if let Some(p) = self.file.parent() {
             parents.insert(p.to_path_buf());
         }
-        if let Some(real) = &self.real_file {
-            if let Some(p) = real.parent() {
+        if let Some(real) = &self.real_file
+            && let Some(p) = real.parent() {
                 parents.insert(p.to_path_buf());
             }
-        }
 
         for dir in parents.iter() {
             watcher.watch(dir, RecursiveMode::NonRecursive)?;
@@ -93,24 +92,22 @@ impl ConfigWatcher {
             if !should_reload {
                 match crate::common::config::Config::read(&self.file) {
                     Ok(new_cfg) => {
-                        if let Ok(current_cfg) = self.query_config().await {
-                            if new_cfg.keys != current_cfg.keys {
+                        if let Ok(current_cfg) = self.query_config().await
+                            && new_cfg.keys != current_cfg.keys {
                                 should_reload = true;
                             }
-                        }
                     }
                     Err(e) => warn!("Failed to read config file for diff check: {:?}", e),
                 }
             }
 
-            if should_reload {
-                if self.request_reload().await.is_ok()
+            if should_reload
+                && self.request_reload().await.is_ok()
                     && let Ok(new_config) = self.query_config().await
                 {
                     self.enabled = new_config.settings.hot_reload;
                     debug!("config reloaded successfully");
                 }
-            }
         }
 
         Ok(())
@@ -126,19 +123,16 @@ impl ConfigWatcher {
                 return true;
             }
 
-            if let Ok(ev_real) = fs::canonicalize(&event.path) {
-                if ev_real == *real {
+            if let Ok(ev_real) = fs::canonicalize(&event.path)
+                && ev_real == *real {
                     return true;
                 }
-            }
 
-            if let Ok(meta) = fs::metadata(&event.path) {
-                if let Some((dev, ino)) = self.real_file_id {
-                    if meta.dev() == dev && meta.ino() == ino {
+            if let Ok(meta) = fs::metadata(&event.path)
+                && let Some((dev, ino)) = self.real_file_id
+                    && meta.dev() == dev && meta.ino() == ino {
                         return true;
                     }
-                }
-            }
         }
 
         event.path.file_name().is_some_and(|n| Some(n) == self.file.file_name())

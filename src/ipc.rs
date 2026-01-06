@@ -242,7 +242,7 @@ impl MachHandler {
                 }
             }
 
-            RiftRequest::GetDisplays => match self.perform_query(|tx| Event::QueryDisplays(tx)) {
+            RiftRequest::GetDisplays => match self.perform_query(Event::QueryDisplays) {
                 Ok(displays) => RiftResponse::Success {
                     data: serde_json::to_value(displays).unwrap(),
                 },
@@ -255,7 +255,7 @@ impl MachHandler {
             },
 
             RiftRequest::GetWindows { space_id } => {
-                let space_id = space_id.map(|id| crate::sys::screen::SpaceId::new(id));
+                let space_id = space_id.map(crate::sys::screen::SpaceId::new);
 
                 match self.perform_query(|tx| Event::QueryWindows { space_id, response: tx }) {
                     Ok(windows) => RiftResponse::Success {
@@ -315,7 +315,7 @@ impl MachHandler {
             }
 
             RiftRequest::GetApplications => {
-                match self.perform_query(|tx| Event::QueryApplications(tx)) {
+                match self.perform_query(Event::QueryApplications) {
                     Ok(applications) => RiftResponse::Success {
                         data: serde_json::to_value(applications).unwrap(),
                     },
@@ -328,7 +328,7 @@ impl MachHandler {
                 }
             }
 
-            RiftRequest::GetMetrics => match self.perform_query(|tx| Event::QueryMetrics(tx)) {
+            RiftRequest::GetMetrics => match self.perform_query(Event::QueryMetrics) {
                 Ok(metrics) => RiftResponse::Success { data: metrics },
                 Err(e) => {
                     error!("{}", e);
@@ -339,7 +339,7 @@ impl MachHandler {
             },
 
             RiftRequest::GetConfig => {
-                match self.perform_config_query(|tx| config_actor::Event::QueryConfig(tx)) {
+                match self.perform_config_query(config_actor::Event::QueryConfig) {
                     Ok(config) => match serde_json::to_value(&config) {
                         Ok(value) => RiftResponse::Success { data: value },
                         Err(e) => {

@@ -68,7 +68,7 @@ impl WindowDiscoveryHandler {
             || reactor.is_mission_control_active()
             || reactor.is_in_drag()
             || reactor.pid_has_changing_screens(pid)
-            || reactor.get_active_drag_session().map_or(false, |s| s.window.pid == pid)
+            || reactor.get_active_drag_session().is_some_and(|s| s.window.pid == pid)
             || has_window_server_visibles_without_ax
             // When known_visible is empty but there are visible window server IDs,
             // we still need to check for windows that were destroyed via CGS notification
@@ -96,9 +96,9 @@ impl WindowDiscoveryHandler {
         };
 
         match skip_stale_cleanup {
-            true => return (Vec::new(), false),
+            true => (Vec::new(), false),
             false => {
-                return (
+                (
                     reactor
                         .window_manager
                         .windows
@@ -120,8 +120,8 @@ impl WindowDiscoveryHandler {
                                 return None;
                             };
 
-                            if let Some(active_windows) = active_space_windows.as_ref() {
-                                if !active_windows.contains(&ws_id) {
+                            if let Some(active_windows) = active_space_windows.as_ref()
+                                && !active_windows.contains(&ws_id) {
                                     trace!(
                                         ?wid,
                                         ws_id = ?ws_id,
@@ -129,7 +129,6 @@ impl WindowDiscoveryHandler {
                                     );
                                     return None;
                                 }
-                            }
 
                             let server_info = reactor
                                 .window_server_info_manager
@@ -163,7 +162,7 @@ impl WindowDiscoveryHandler {
 
                             let is_on_active_space = active_space_windows
                                 .as_ref()
-                                .map_or(false, |set| set.contains(&ws_id));
+                                .is_some_and(|set| set.contains(&ws_id));
 
                             if unsuitable
                                 || invalid_layer
@@ -177,7 +176,7 @@ impl WindowDiscoveryHandler {
                         })
                         .collect(),
                     pending_refresh,
-                );
+                )
             }
         }
     }
@@ -213,7 +212,7 @@ impl WindowDiscoveryHandler {
         reactor.app_manager.purge_expired(APP_RULE_TTL_MS);
 
         let any_recent = new.iter().any(|(_, info)| {
-            info.sys_id.map_or(false, |wsid| {
+            info.sys_id.is_some_and(|wsid| {
                 reactor.app_manager.is_wsid_recent(wsid, APP_RULE_TTL_MS)
             })
         });
@@ -585,9 +584,9 @@ impl WindowDiscoveryHandler {
             ));
         }
 
-        if let Some(main_window) = reactor.main_window() {
-            if main_window.pid == pid {
-                if let Some(space) = reactor.main_window_space() {
+        if let Some(main_window) = reactor.main_window()
+            && main_window.pid == pid
+                && let Some(space) = reactor.main_window_space() {
                     if reactor.is_space_active(space) {
                         reactor.send_layout_event(LayoutEvent::WindowFocused(space, main_window));
                     }
@@ -605,7 +604,5 @@ impl WindowDiscoveryHandler {
                             .set_active_workspace(space, ws_id);
                     }
                 }
-            }
-        }
     }
 }

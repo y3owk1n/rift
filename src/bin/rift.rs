@@ -275,7 +275,7 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
         Some(window_tx_store.clone()),
     );
 
-    let _ = events_tx.send(reactor::Event::RegisterWmSender(wm_controller_sender.clone()));
+    events_tx.send(reactor::Event::RegisterWmSender(wm_controller_sender.clone()));
 
     let notification_center = NotificationCenter::new(wm_controller_sender.clone());
 
@@ -324,12 +324,12 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
 
-        let _ = events_tx_for_signal.send(reactor::Event::Command(reactor::Command::Reactor(
+        events_tx_for_signal.send(reactor::Event::Command(reactor::Command::Reactor(
             reactor::ReactorCommand::SaveAndExit,
         )));
     });
 
-    let _executor_session = Executor::run_main(mtm, async move {
+    Executor::run_main(mtm, async move {
         join!(
             wm_controller.run(),
             notification_center.watch_for_notifications(),

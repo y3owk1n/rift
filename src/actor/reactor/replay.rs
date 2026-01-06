@@ -14,7 +14,7 @@ use crate::common::config::Config;
 use crate::layout_engine::LayoutEngine;
 
 thread_local! {
-    static DESERIALIZE_THREAD_HANDLE: RefCell<Option<AppThreadHandle>> = RefCell::new(None);
+    static DESERIALIZE_THREAD_HANDLE: RefCell<Option<AppThreadHandle>> = const { RefCell::new(None) };
 }
 
 pub(super) fn deserialize_app_thread_handle() -> AppThreadHandle {
@@ -65,7 +65,7 @@ impl Record {
     pub(super) fn on_event(&mut self, event: &Event) {
         let Some(file) = self.file() else { return };
         let line = ron::ser::to_string(&event).unwrap();
-        write!(file, "{line}\n").unwrap();
+        writeln!(file, "{line}").unwrap();
     }
 }
 

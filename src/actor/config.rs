@@ -61,11 +61,11 @@ impl ConfigActor {
             match event {
                 Event::QueryConfig(resp) => {
                     let v = self.handle_config_query();
-                    let _ = resp.send(v);
+                    resp.send(v);
                 }
                 Event::ApplyConfig { cmd, response } => {
                     let res = self.handle_config_command(cmd);
-                    let _ = response.send(res);
+                    response.send(res);
                 }
             }
         }
@@ -120,7 +120,7 @@ impl ConfigActor {
                 240.0,
             ),
             ConfigCommand::SetAnimationEasing(v) => {
-                new_config.settings.animation_easing = v.clone();
+                new_config.settings.animation_easing = v;
                 config_changed = true;
                 info!(
                     "Updated animation_easing to: {:?}",

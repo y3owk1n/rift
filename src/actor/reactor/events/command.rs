@@ -187,32 +187,29 @@ impl CommandEventHandler {
             .drag_manager
             .update_config(reactor.config_manager.config.settings.window_snapping);
 
-        if let Some(tx) = &reactor.communication_manager.stack_line_tx {
-            if let Err(e) = tx.try_send(StackLineEvent::ConfigUpdated(
+        if let Some(tx) = &reactor.communication_manager.stack_line_tx
+            && let Err(e) = tx.try_send(StackLineEvent::ConfigUpdated(
                 reactor.config_manager.config.clone(),
             )) {
                 warn!("Failed to send config update to stack line: {}", e);
             }
-        }
 
-        if let Some(tx) = &reactor.menu_manager.menu_tx {
-            if let Err(e) = tx.try_send(menu_bar::Event::ConfigUpdated(
+        if let Some(tx) = &reactor.menu_manager.menu_tx
+            && let Err(e) = tx.try_send(menu_bar::Event::ConfigUpdated(
                 reactor.config_manager.config.clone(),
             )) {
                 warn!("Failed to send config update to menu bar: {}", e);
             }
-        }
 
         let _ = reactor.update_layout(false, true).unwrap_or_else(|e| {
             warn!("Layout update failed: {}", e);
             false
         });
 
-        if old_keys != reactor.config_manager.config.keys {
-            if let Some(wm) = &reactor.communication_manager.wm_sender {
+        if old_keys != reactor.config_manager.config.keys
+            && let Some(wm) = &reactor.communication_manager.wm_sender {
                 wm.send(WmEvent::ConfigUpdated(reactor.config_manager.config.clone()));
             }
-        }
     }
 
     pub fn handle_command_reactor_debug(reactor: &mut Reactor) {
@@ -274,16 +271,15 @@ impl CommandEventHandler {
             if let Err(e) = reactor.communication_manager.raise_manager_tx.try_send(request) {
                 warn!("Failed to send raise request: {}", e);
             }
-        } else if let Some(wsid) = window_server_id {
-            if let Err(e) = window_server::make_key_window(window_id.pid, wsid) {
+        } else if let Some(wsid) = window_server_id
+            && let Err(e) = window_server::make_key_window(window_id.pid, wsid) {
                 warn!("Failed to make key window: {:?}", e);
             }
-        }
     }
 
     pub fn handle_command_reactor_show_mission_control_all(reactor: &mut Reactor) {
         if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() {
-            let _ = wm.send(crate::actor::wm_controller::WmEvent::Command(
+            wm.send(crate::actor::wm_controller::WmEvent::Command(
                 crate::actor::wm_controller::WmCommand::Wm(
                     crate::actor::wm_controller::WmCmd::ShowMissionControlAll,
                 ),
@@ -293,7 +289,7 @@ impl CommandEventHandler {
 
     pub fn handle_command_reactor_show_mission_control_current(reactor: &mut Reactor) {
         if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() {
-            let _ = wm.send(crate::actor::wm_controller::WmEvent::Command(
+            wm.send(crate::actor::wm_controller::WmEvent::Command(
                 crate::actor::wm_controller::WmCommand::Wm(
                     crate::actor::wm_controller::WmCmd::ShowMissionControlCurrent,
                 ),
@@ -303,7 +299,7 @@ impl CommandEventHandler {
 
     pub fn handle_command_reactor_dismiss_mission_control(reactor: &mut Reactor) {
         if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() {
-            let _ = wm.send(crate::actor::wm_controller::WmEvent::Command(
+            wm.send(crate::actor::wm_controller::WmEvent::Command(
                 crate::actor::wm_controller::WmCommand::Wm(
                     crate::actor::wm_controller::WmCmd::ShowMissionControlAll,
                 ),

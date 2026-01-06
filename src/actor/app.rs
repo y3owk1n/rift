@@ -191,12 +191,13 @@ pub struct AppThreadHandle {
 
 impl AppThreadHandle {
     pub(crate) fn new_for_test(requests_tx: actor::Sender<Request>) -> Self {
-        let this = AppThreadHandle { requests_tx };
-        this
+        
+        AppThreadHandle { requests_tx }
     }
 
     pub fn send(&self, req: Request) -> anyhow::Result<()> {
-        Ok(self.requests_tx.send(req))
+        self.requests_tx.send(req);
+        Ok(())
     }
 }
 
@@ -417,7 +418,7 @@ impl State {
 
         let initial_window_elements = self.app.windows().unwrap_or_default();
 
-        let window_count = initial_window_elements.len() as usize;
+        let window_count = initial_window_elements.len();
         self.windows.reserve(window_count);
         let mut windows = Vec::with_capacity(window_count);
 
@@ -477,11 +478,10 @@ impl State {
                 }
             }
             Request::CloseWindow(wid) => {
-                if let Some(window) = self.windows.get(wid) {
-                    if let Err(err) = window.elem.close() {
+                if let Some(window) = self.windows.get(wid)
+                    && let Err(err) = window.elem.close() {
                         warn!(?wid, ?err, "Failed to close window");
                     }
-                }
             }
             Request::GetVisibleWindows { force_refresh } => {
                 let window_elems = match self.app.windows() {
@@ -495,8 +495,8 @@ impl State {
                         return Err(e);
                     }
                 };
-                let mut new = Vec::with_capacity(window_elems.len() as usize);
-                let mut known_visible = Vec::with_capacity(window_elems.len() as usize);
+                let mut new = Vec::with_capacity(window_elems.len());
+                let mut known_visible = Vec::with_capacity(window_elems.len());
                 for elem in window_elems.iter() {
                     let elem = elem.clone();
                     if let Ok(id) = self.id(&elem) {
@@ -665,9 +665,7 @@ impl State {
                     Ok(())
                 });
                 unsafe { SLSReenableUpdate(*G_CONNECTION) };
-                if let Err(err) = result {
-                    return Err(err);
-                }
+                result?
             }
             &mut Request::BeginWindowAnimation(wid) => {
                 let window = self.window(wid)?;
@@ -913,7 +911,7 @@ impl State {
                 quiet_window_change,
                 tx,
             )) {
-                let _ = prev_tx.send(());
+                prev_tx.send(());
             }
 
             drop(this);
@@ -1023,7 +1021,7 @@ impl State {
         } else {
             let (quiet_activation, quiet_window_change) = match self.last_activated.take() {
                 Some((ts, quiet_activation, quiet_window_change, tx)) => {
-                    _ = tx.send(());
+                    tx.send(());
                     if ts.elapsed() < Duration::from_millis(1000) {
                         trace!("by us");
                         (quiet_activation, quiet_window_change)
@@ -1112,12 +1110,12 @@ impl State {
             return None;
         };
 
-        let bundle_is_widget = info.bundle_id.as_deref().map_or(false, |id| {
+        let bundle_is_widget = info.bundle_id.as_deref().is_some_and(|id| {
             let id_lower = id.to_ascii_lowercase();
             id_lower.ends_with(".widget") || id_lower.contains(".widget.")
         });
 
-        let path_is_extension = info.path.as_ref().and_then(|p| p.to_str()).map_or(false, |path| {
+        let path_is_extension = info.path.as_ref().and_then(|p| p.to_str()).is_some_and(|path| {
             let lower = path.to_ascii_lowercase();
             lower.contains(".appex/") || lower.ends_with(".appex")
         });
@@ -1154,9 +1152,9 @@ impl State {
 
         let window_server_id = info.sys_id.or_else(|| {
             WindowServerId::try_from(&elem)
-                .or_else(|e| {
+                .map_err(|e| {
                     info!("Could not get window server id for {elem:?}: {e}");
-                    Err(e)
+                    e
                 })
                 .ok()
         });
@@ -1299,7 +1297,7 @@ impl State {
 
         self.windows
             .iter()
-            .find(|(_, w)| w.window_server_id.map_or(false, |wsid| !current_wsids.contains(&wsid)))
+            .find(|(_, w)| w.window_server_id.is_some_and(|wsid| !current_wsids.contains(&wsid)))
             .map(|(&wid, _)| wid)
     }
 
@@ -1325,7 +1323,7 @@ impl State {
 impl Drop for State {
     fn drop(&mut self) {
         if let Some((_, _, _, tx)) = self.last_activated.take() {
-            let _ = tx.send(());
+            tx.send(());
         }
     }
 }
@@ -1363,7 +1361,7 @@ fn app_thread_main(
     };
     let (notifications_tx, notifications_rx) = actor::channel();
     let observer =
-        observer.install(move |elem, notif| _ = notifications_tx.send((elem, notif.to_owned())));
+        observer.install(move |elem, notif| notifications_tx.send((elem, notif.to_owned())));
 
     let (raises_tx, raises_rx) = actor::channel();
     let state = State {

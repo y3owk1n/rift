@@ -9,11 +9,7 @@ pub fn parse_command(command: &str) -> Vec<String> {
     while let Some(ch) = chars.next() {
         match ch {
             '\'' | '"' => {
-                if in_quotes {
-                    in_quotes = false;
-                } else {
-                    in_quotes = true;
-                }
+                in_quotes = !in_quotes;
             }
             ' ' | '\t' if !in_quotes => {
                 if !current_part.is_empty() {

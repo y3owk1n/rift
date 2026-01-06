@@ -51,10 +51,10 @@ pub fn init(event: CGSEventType) -> i32 {
 
         {
             let mut channels = EVENT_CHANNELS.lock();
-            if !channels.contains_key(&event) {
+            channels.entry(event).or_insert_with(|| {
                 let (tx, rx) = actor::channel::<EventData>();
-                channels.insert(event, (tx, Some(rx)));
-            }
+                (tx, Some(rx))
+            });
         }
 
         let raw: u32 = event.into();
@@ -73,7 +73,7 @@ pub fn init(event: CGSEventType) -> i32 {
         } else {
             debug!("Failed to register event {} (raw={}), res={}", event, raw, res);
         }
-        return res;
+        res
     }
 }
 

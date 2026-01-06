@@ -10,6 +10,12 @@ pub struct Tree<O> {
     pub data: O,
 }
 
+impl Default for Tree<()> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Tree<()> {
     pub fn new() -> Self {
         Self::with_observer(())
@@ -126,14 +132,13 @@ impl DerefMut for OwnedNode {
 
 impl Drop for OwnedNode {
     fn drop(&mut self) {
-        if cfg!(debug_assertions) {
-            if let Some(node) = self.0 {
+        if cfg!(debug_assertions)
+            && let Some(node) = self.0 {
                 panic!(
                     "OwnedNode {name:?} dropped without OwnedNode::remove being called: {node:?}",
                     name = self.1,
                 );
             }
-        }
     }
 }
 
@@ -425,11 +430,10 @@ impl<'a, O: Observer> ReattachedNode<'a, O> {
 
 impl<'a, O: Observer> Drop for ReattachedNode<'a, O> {
     fn drop(&mut self) {
-        if let Some(old) = self.old_parent {
-            if old != self.new_parent {
+        if let Some(old) = self.old_parent
+            && old != self.new_parent {
                 O::removed_child(self.detached.tree, old);
             }
-        }
     }
 }
 
@@ -567,18 +571,16 @@ impl NodeMap {
         if let Some((prev_sibling, next_sibling, parent)) =
             self.map.get(id).map(|n| (n.prev_sibling, n.next_sibling, n.parent))
         {
-            if let Some(prev) = prev_sibling {
-                if let Some(prev_node) = self.map.get_mut(prev) {
+            if let Some(prev) = prev_sibling
+                && let Some(prev_node) = self.map.get_mut(prev) {
                     prev_node.next_sibling = next_sibling;
                 }
-            }
-            if let Some(next) = next_sibling {
-                if let Some(next_node) = self.map.get_mut(next) {
+            if let Some(next) = next_sibling
+                && let Some(next_node) = self.map.get_mut(next) {
                     next_node.prev_sibling = prev_sibling;
                 }
-            }
-            if let Some(parent) = parent {
-                if let Some(parent_node) = self.map.get_mut(parent) {
+            if let Some(parent) = parent
+                && let Some(parent_node) = self.map.get_mut(parent) {
                     if parent_node.first_child == Some(id) {
                         parent_node.first_child = next_sibling;
                     }
@@ -586,7 +588,6 @@ impl NodeMap {
                         parent_node.last_child = prev_sibling;
                     }
                 }
-            }
 
             if let Some(node) = self.map.get_mut(id) {
                 node.prev_sibling = None;

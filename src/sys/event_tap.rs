@@ -60,11 +60,10 @@ unsafe fn trampoline_drop(ptr: *mut c_void) {
     }
 
     let ctx: Box<TrampolineCtx> = unsafe { Box::from_raw(ptr as *mut TrampolineCtx) };
-    if let Some(dropper) = ctx.original_drop {
-        if !ctx.original_user_info.is_null() {
+    if let Some(dropper) = ctx.original_drop
+        && !ctx.original_user_info.is_null() {
             unsafe { dropper(ctx.original_user_info) };
         }
-    }
 }
 
 pub struct EventTap {

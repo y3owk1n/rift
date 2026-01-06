@@ -46,10 +46,7 @@ pub fn set_mouse_state(state: MouseState) {
 }
 
 pub fn get_mouse_state() -> Option<MouseState> {
-    match MouseState::try_from(MOUSE_STATE.load(Ordering::Relaxed)) {
-        Ok(s) => Some(s),
-        Err(_) => None,
-    }
+    MouseState::try_from(MOUSE_STATE.load(Ordering::Relaxed)).ok()
 }
 
 pub fn warp_mouse(point: CGPoint) -> Result<(), CGError> {

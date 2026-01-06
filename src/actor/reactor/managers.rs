@@ -276,12 +276,12 @@ impl LayoutManager {
             let layout =
                 reactor.layout_manager.layout_engine.calculate_layout_with_virtual_workspaces(
                     space,
-                    screen.frame.clone(),
+                    screen.frame,
                     &gaps,
                     stack_line_thickness,
                     stack_line_horiz,
                     stack_line_vert,
-                    &get_window_frame,
+                    get_window_frame,
                 );
             layout_result.push((space, layout));
         }
@@ -311,8 +311,8 @@ impl LayoutManager {
         let stack_line_vert = reactor.config_manager.config.settings.ui.stack_line.vert_placement;
 
         for (space, layout) in layout_result {
-            if stack_line_enabled {
-                if let Some(tx) = &reactor.communication_manager.stack_line_tx {
+            if stack_line_enabled
+                && let Some(tx) = &reactor.communication_manager.stack_line_tx {
                     let screen = reactor.space_manager.screen_by_space(space);
                     if let Some(screen) = screen {
                         let display_uuid = if screen.display_uuid.is_empty() {
@@ -360,7 +360,6 @@ impl LayoutManager {
                         }
                     }
                 }
-            }
 
             let suppress_animation = is_workspace_switch
                 || reactor.workspace_switch_manager.active_workspace_switch.is_some();

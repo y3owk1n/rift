@@ -107,10 +107,8 @@ static CAPTURE_POOL: Lazy<CapturePool> = Lazy::new(|| {
                     {
                         overlay.request_refresh();
                     }
-                } else {
-                    if let Some(mut set) = IN_FLIGHT.try_lock() {
-                        set.remove(&(job.generation, job.task.window_id));
-                    }
+                } else if let Some(mut set) = IN_FLIGHT.try_lock() {
+                    set.remove(&(job.generation, job.task.window_id));
                 }
             }
         });
@@ -359,12 +357,11 @@ impl MissionControlState {
                         visible_index += 1;
                     }
                 }
-                if let Some(idx) = active_selection {
-                    if self.selection() != Some(Selection::Workspace(idx)) {
+                if let Some(idx) = active_selection
+                    && self.selection() != Some(Selection::Workspace(idx)) {
                         self.selection = Some(Selection::Workspace(idx));
                         changed = true;
                     }
-                }
                 changed
             } else {
                 false
@@ -482,7 +479,7 @@ fn workspace_column_count(count: usize) -> usize {
     if count == 0 {
         1
     } else {
-        ((count + 1) / 2).max(1)
+        count.div_ceil(2).max(1)
     }
 }
 
@@ -760,7 +757,7 @@ impl MissionControlOverlay {
 
         let mut best_layout: Option<(usize, usize, f64)> = None;
         for cols in 1..=windows.len() {
-            let rows = (windows.len() + cols - 1) / cols;
+            let rows = windows.len().div_ceil(cols);
             let total_spacing_x = spacing * ((cols + 1) as f64);
             let total_spacing_y = spacing * ((rows + 1) as f64);
             let cell_w =
@@ -1027,12 +1024,11 @@ impl MissionControlOverlay {
             _ => None,
         };
 
-        if let Some(selection) = new_selection {
-            if state.selection() != Some(selection) {
+        if let Some(selection) = new_selection
+            && state.selection() != Some(selection) {
                 state.set_selection(selection);
                 return true;
             }
-        }
         false
     }
 
@@ -1095,12 +1091,11 @@ impl MissionControlOverlay {
             _ => None,
         };
 
-        if let Some(selection) = new_selection {
-            if state.selection() != Some(selection) {
+        if let Some(selection) = new_selection
+            && state.selection() != Some(selection) {
                 state.set_selection(selection);
                 return true;
             }
-        }
         false
     }
 
@@ -1141,7 +1136,8 @@ impl MissionControlOverlay {
             let mode = state.mode();
             let selection = state.selection();
 
-            let action = match (mode, selection) {
+            
+            match (mode, selection) {
                 (
                     Some(MissionControlMode::AllWorkspaces(workspaces)),
                     Some(Selection::Workspace(idx)),
@@ -1174,8 +1170,7 @@ impl MissionControlOverlay {
                     }
                 }
                 _ => None,
-            };
-            action
+            }
         };
 
         if let Some(action) = action {
@@ -1183,7 +1178,7 @@ impl MissionControlOverlay {
         }
     }
 
-    fn visible_workspaces<'a>(workspaces: &'a [WorkspaceData]) -> Vec<(usize, &'a WorkspaceData)> {
+    fn visible_workspaces(workspaces: &[WorkspaceData]) -> Vec<(usize, &WorkspaceData)> {
         workspaces
             .iter()
             .enumerate()
@@ -1340,7 +1335,7 @@ impl MissionControlOverlay {
             autoreleasepool(|_| {
                 let window = &windows[idx];
                 let rect = rects[idx];
-                let is_selected = selected_idx.map_or(false, |s| s == idx);
+                let is_selected = selected_idx == Some(idx);
                 Self::draw_window_outline(rect, is_selected);
 
                 let (layer, style_changed, had_image) = {
@@ -1358,7 +1353,7 @@ impl MissionControlOverlay {
                     let style_changed = s
                         .preview_layer_styles
                         .entry(window.id)
-                        .or_insert_with(Default::default)
+                        .or_default()
                         .update_selected(is_selected);
                     let maybe_img_ptr = {
                         let cache = s.preview_cache.read();
@@ -1631,13 +1626,13 @@ impl MissionControlOverlay {
 
         CATransaction::commit();
 
-        if !ready_ids.is_empty() {
-            if let Ok(mut st) = state_cell.try_borrow_mut() {
+        if !ready_ids.is_empty()
+            && let Ok(mut st) = state_cell.try_borrow_mut() {
                 for wid in ready_ids.iter().copied() {
                     st.ready_previews.insert(wid);
                 }
-                if !st.suppress_live_present {
-                    if let (Some(root), Some(wid), Some(size)) =
+                if !st.suppress_live_present
+                    && let (Some(root), Some(wid), Some(size)) =
                         (st.render_root.clone(), st.render_window_id, st.render_size)
                     {
                         unsafe {
@@ -1664,9 +1659,7 @@ impl MissionControlOverlay {
                             }
                         }
                     }
-                }
             }
-        }
     }
 
     fn draw_contents_into_layer(&self, bounds: CGRect, parent_layer: &CALayer) {
@@ -1686,7 +1679,7 @@ impl MissionControlOverlay {
         match mode {
             MissionControlMode::AllWorkspaces(workspaces) => {
                 self.draw_workspaces(
-                    &state_cell,
+                    state_cell,
                     parent_layer,
                     &workspaces,
                     content_bounds,
@@ -1695,7 +1688,7 @@ impl MissionControlOverlay {
             }
             MissionControlMode::CurrentWorkspace(windows) => {
                 self.draw_windows_tile(
-                    &state_cell,
+                    state_cell,
                     parent_layer,
                     &windows,
                     content_bounds,
@@ -1870,7 +1863,7 @@ impl MissionControlOverlay {
         let _ = self.cgs_window.order_above(None);
 
         let app = NSApplication::sharedApplication(self.mtm);
-        let _ = app.activate();
+        app.activate();
         self.ensure_key_tap();
 
         self.draw_and_present();
@@ -1974,7 +1967,7 @@ impl MissionControlOverlay {
     fn finish_fade(&self, fade_id: u64, final_alpha: f32) {
         match self.fade_state.try_borrow_mut() {
             Ok(mut slot) => {
-                let matches = slot.as_ref().map_or(false, |state| state.id == fade_id);
+                let matches = slot.as_ref().is_some_and(|state| state.id == fade_id);
                 if !matches {
                     return;
                 }
@@ -2082,7 +2075,8 @@ impl MissionControlOverlay {
     }
 
     fn handle_keycode(&self, keycode: u16, flags: CGEventFlags) -> bool {
-        let handled = match keycode {
+        
+        match keycode {
             53 => {
                 self.emit_action(MissionControlAction::Dismiss);
                 true
@@ -2123,8 +2117,7 @@ impl MissionControlOverlay {
                 true
             }
             _ => false,
-        };
-        handled
+        }
     }
 
     fn handle_click_global(&self, g_pt: CGPoint) {
@@ -2199,13 +2192,12 @@ impl MissionControlOverlay {
             }
         };
 
-        if let Some(sel) = new_sel {
-            if state.selection() != Some(sel) {
+        if let Some(sel) = new_sel
+            && state.selection() != Some(sel) {
                 state.set_selection(sel);
                 drop(state);
                 self.draw_and_present();
             }
-        }
     }
 
     fn ensure_key_tap(&self) {

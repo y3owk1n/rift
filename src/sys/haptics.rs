@@ -1,5 +1,5 @@
 #![allow(non_camel_case_types)]
-use std::ffi::{CStr, c_char, c_void};
+use std::ffi::{c_char, c_void};
 
 use objc2_core_foundation::{CFNumber, CFNumberType, CFRetained, CFString, CFType};
 use once_cell::sync::OnceCell;
@@ -72,7 +72,7 @@ impl MtsState {
     fn open_default_or_all() -> Option<Self> {
         let mut iter: io_iterator_t = 0;
         unsafe {
-            let name = CStr::from_bytes_with_nul_unchecked(b"AppleMultitouchDevice\0");
+            let name = c"AppleMultitouchDevice";
             let matching = IOServiceMatching(name.as_ptr());
             if matching.is_null() {
                 return None;
@@ -139,7 +139,7 @@ impl MtsState {
 static MTS: OnceCell<Option<MtsState>> = OnceCell::new();
 
 fn mts_state() -> Option<&'static MtsState> {
-    MTS.get_or_init(|| MtsState::open_default_or_all()).as_ref()
+    MTS.get_or_init(MtsState::open_default_or_all).as_ref()
 }
 
 pub fn perform_haptic(pattern: HapticPattern) -> bool {

@@ -161,7 +161,7 @@ impl AnimationManager {
         let mut anim = Animation::new(
             reactor.config_manager.config.settings.animation_fps,
             reactor.config_manager.config.settings.animation_duration,
-            reactor.config_manager.config.settings.animation_easing.clone(),
+            reactor.config_manager.config.settings.animation_easing,
         );
         let mut animated_count = 0;
         let mut animated_wids_wsids: Vec<u32> = Vec::with_capacity(layout.len());
@@ -215,8 +215,7 @@ impl AnimationManager {
                 .layout_manager
                 .layout_engine
                 .virtual_workspace_manager()
-                .workspace_for_window(space, wid)
-                .map_or(false, |ws| ws == active_ws);
+                .workspace_for_window(space, wid) == Some(active_ws);
 
             if is_active {
                 trace!(?wid, ?current_frame, ?target_frame, "Animating visible window");
@@ -321,22 +320,20 @@ impl AnimationManager {
             let mut has_txid = false;
             let mut txid_entries: Vec<(WindowServerId, TransactionId, CGRect)> =
                 Vec::with_capacity(frames.len());
-            if let Some(window) = reactor.window_manager.windows.get_mut(&first_wid) {
-                if let Some(wsid) = window.window_server_id {
+            if let Some(window) = reactor.window_manager.windows.get_mut(&first_wid)
+                && let Some(wsid) = window.window_server_id {
                     txid = reactor.transaction_manager.generate_next_txid(wsid);
                     has_txid = true;
                     txid_entries.push((wsid, txid, first_target));
                 }
-            }
 
             if has_txid {
                 for (wid, frame) in frames.iter().skip(1) {
-                    if let Some(w) = reactor.window_manager.windows.get_mut(wid) {
-                        if let Some(wsid) = w.window_server_id {
+                    if let Some(w) = reactor.window_manager.windows.get_mut(wid)
+                        && let Some(wsid) = w.window_server_id {
                             reactor.transaction_manager.set_last_sent_txid(wsid, txid);
                             txid_entries.push((wsid, txid, *frame));
                         }
-                    }
                 }
                 reactor.transaction_manager.update_txid_entries(txid_entries);
             }

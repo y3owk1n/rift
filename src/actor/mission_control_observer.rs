@@ -80,11 +80,11 @@ impl NativeMissionControl {
             | K_AX_EXPOSE_SHOW_FRONT_WINDOWS
             | K_AX_EXPOSE_SHOW_DESKTOP => {
                 active_clone.store(true, Ordering::SeqCst);
-                let _ = tx_clone.send(Event::MissionControlNativeEntered);
+                tx_clone.send(Event::MissionControlNativeEntered);
             }
             K_AX_EXPOSE_EXIT => {
                 active_clone.store(false, Ordering::SeqCst);
-                let _ = tx_clone.send(Event::MissionControlNativeExited);
+                tx_clone.send(Event::MissionControlNativeExited);
             }
             _ => (),
         });
@@ -125,11 +125,10 @@ impl NativeMissionControl {
 fn find_dock_pid() -> pid_t {
     let workspace = NSWorkspace::sharedWorkspace();
     for app in workspace.runningApplications().into_iter() {
-        if let Some(bid) = app.bundle_id() {
-            if bid.to_string() == "com.apple.dock" {
+        if let Some(bid) = app.bundle_id()
+            && bid.to_string() == "com.apple.dock" {
                 return app.processIdentifier();
             }
-        }
     }
     0
 }

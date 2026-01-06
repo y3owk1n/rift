@@ -716,7 +716,7 @@ pub unsafe fn send_mach_reply(
     let aligned_len = (response_len + 3) & !3;
     let total_size = (size_of::<mach_msg_header_t>() as u32) + aligned_len;
 
-    reply.header.msgh_bits = MACH_MSGH_BITS(reply_descriptor as u32, 0);
+    reply.header.msgh_bits = MACH_MSGH_BITS(reply_descriptor, 0);
     reply.header.msgh_size = total_size;
     reply.header.msgh_remote_port = reply_port;
     reply.header.msgh_local_port = 0;

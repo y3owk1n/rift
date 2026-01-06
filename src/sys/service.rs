@@ -50,7 +50,7 @@ pub fn handle_service_command(cmd: &ServiceCommands) -> Result<&'static str, Str
 fn plist_path() -> io::Result<PathBuf> {
     let home = env::var_os("HOME")
         .map(PathBuf::from)
-        .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "HOME not set"))?;
+        .ok_or_else(|| io::Error::other("HOME not set"))?;
     Ok(home.join("Library").join("LaunchAgents").join(format!("{RIFT_PLIST}.plist")))
 }
 
@@ -66,8 +66,7 @@ fn find_rift_executable() -> io::Result<PathBuf> {
     }
 
     let exe_path = env::current_exe().map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::Other,
+        io::Error::other(
             "unable to retrieve path of current executable",
         )
     })?;
@@ -88,14 +87,14 @@ fn find_rift_executable() -> io::Result<PathBuf> {
 
 fn plist_contents() -> io::Result<String> {
     let user =
-        env::var("USER").map_err(|_| io::Error::new(io::ErrorKind::Other, "env USER not set"))?;
+        env::var("USER").map_err(|_| io::Error::other("env USER not set"))?;
     let path_env =
-        env::var("PATH").map_err(|_| io::Error::new(io::ErrorKind::Other, "env PATH not set"))?;
+        env::var("PATH").map_err(|_| io::Error::other("env PATH not set"))?;
 
     let agent_exe = find_rift_executable()?;
     let exe_str = agent_exe
         .to_str()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "non-UTF8 executable path"))?;
+        .ok_or_else(|| io::Error::other("non-UTF8 executable path"))?;
 
     let plist = format!(
         r#"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
@@ -177,8 +176,7 @@ fn run_launchctl(args: &[&str], suppress_output: bool) -> io::Result<i32> {
         Ok(code)
     } else {
         let sig = status.signal().unwrap_or_default();
-        Err(io::Error::new(
-            io::ErrorKind::Other,
+        Err(io::Error::other(
             format!("launchctl terminated by signal {}", sig),
         ))
     }
@@ -227,8 +225,7 @@ pub fn service_uninstall() -> io::Result<()> {
         ));
     }
     if service_is_running()? {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
+        return Err(io::Error::other(
             "service is still running; stop it first with `rift service stop` before uninstalling",
         ));
     }
@@ -260,13 +257,12 @@ pub fn service_start() -> io::Result<()> {
         let _ = run_launchctl(&["enable", &service_target], true);
 
         let _ = spawn_launchctl(&["bootstrap", &domain_target, plist_path.to_str().unwrap()]);
-        let _ = std::thread::sleep(std::time::Duration::from_millis(150));
+        std::thread::sleep(std::time::Duration::from_millis(150));
         let code = run_launchctl(&["kickstart", &service_target], false)?;
         if code == 0 {
             Ok(())
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 format!("kickstart after bootstrap failed (exit {})", code),
             ))
         }
@@ -275,8 +271,7 @@ pub fn service_start() -> io::Result<()> {
         if code == 0 {
             Ok(())
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 format!("kickstart failed (exit {})", code),
             ))
         }
@@ -298,8 +293,7 @@ pub fn service_restart() -> io::Result<()> {
     if code == 0 {
         Ok(())
     } else {
-        Err(io::Error::new(
-            io::ErrorKind::Other,
+        Err(io::Error::other(
             format!("kickstart -k failed (exit {})", code),
         ))
     }
@@ -325,8 +319,7 @@ pub fn service_stop() -> io::Result<()> {
         if code == 0 {
             Ok(())
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 format!("kill SIGTERM failed (exit {})", code),
             ))
         }
@@ -338,8 +331,7 @@ pub fn service_stop() -> io::Result<()> {
         if code1 == 0 && code2 == 0 {
             Ok(())
         } else {
-            Err(io::Error::new(
-                io::ErrorKind::Other,
+            Err(io::Error::other(
                 format!("bootout exit {}, disable exit {}", code1, code2),
             ))
         }

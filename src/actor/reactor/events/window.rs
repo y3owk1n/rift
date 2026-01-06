@@ -53,9 +53,9 @@ impl WindowEventHandler {
         let server_id = window_state.window_server_id;
         reactor.window_manager.windows.insert(wid, window_state);
 
-        if is_manageable {
-            if let Some(space) = reactor.best_space_for_window(&frame, server_id) {
-                if reactor.is_space_active(space) {
+        if is_manageable
+            && let Some(space) = reactor.best_space_for_window(&frame, server_id)
+                && reactor.is_space_active(space) {
                     if let Some(app_info) =
                         reactor.app_manager.apps.get(&wid.pid).map(|app| app.info.clone())
                     {
@@ -74,8 +74,6 @@ impl WindowEventHandler {
                         reactor.send_layout_event(LayoutEvent::WindowAdded(space, wid));
                     }
                 }
-            }
-        }
         // TODO: drag state is maybe managed by ensure_active_drag
         // if mouse_state == MouseState::Down {
         //     reactor.drag_manager.drag_state = DragState::Active { ... };
@@ -136,15 +134,14 @@ impl WindowEventHandler {
             }
         }
 
-        if let DragState::PendingSwap { session, target } = &reactor.drag_manager.drag_state {
-            if session.window == wid || *target == wid {
+        if let DragState::PendingSwap { session, target } = &reactor.drag_manager.drag_state
+            && (session.window == wid || *target == wid) {
                 trace!(
                     ?wid,
                     "Clearing pending drag swap because a participant window was destroyed"
                 );
                 reactor.drag_manager.drag_state = DragState::Inactive;
             }
-        }
 
         let dragged_window = reactor.drag_manager.dragged();
         let last_target = reactor.drag_manager.last_target();
@@ -211,9 +208,9 @@ impl WindowEventHandler {
             window.is_manageable = is_manageable;
         }
 
-        if is_manageable {
-            if let Some(space) = reactor.best_space_for_window(&frame, server_id) {
-                if reactor.is_space_active(space) {
+        if is_manageable
+            && let Some(space) = reactor.best_space_for_window(&frame, server_id)
+                && reactor.is_space_active(space) {
                     let should_dispatch = reactor
                         .window_manager
                         .windows
@@ -224,8 +221,6 @@ impl WindowEventHandler {
                         reactor.send_layout_event(LayoutEvent::WindowAdded(space, wid));
                     }
                 }
-            }
-        }
     }
 
     pub fn handle_window_frame_changed(
@@ -246,7 +241,7 @@ impl WindowEventHandler {
             "WindowFrameChanged event"
         );
 
-        let effective_mouse_state = mouse_state.or_else(|| get_mouse_state());
+        let effective_mouse_state = mouse_state.or_else(get_mouse_state);
         let event_mouse_state = mouse_state;
         let result = (|| -> bool {
             let Some(window) = reactor.window_manager.windows.get_mut(&wid) else {
@@ -284,8 +279,8 @@ impl WindowEventHandler {
                 triggered_by_rift = false;
                 has_pending_request = false;
             }
-            if has_pending_request {
-                if let Some(last_seen) = last_seen
+            if has_pending_request
+                && let Some(last_seen) = last_seen
                     && last_seen != last_sent_txid
                 {
                     // Ignore events that happened before the last time we
@@ -294,7 +289,6 @@ impl WindowEventHandler {
                     debug!(?last_seen, ?last_sent_txid, "Ignoring frame change");
                     return false;
                 }
-            }
             if requested.0 {
                 // TODO: If the size is different from requested, applying a
                 // correction to the model can result in weird feedback
@@ -387,46 +381,35 @@ impl WindowEventHandler {
                         &reactor.drag_manager.drag_state,
                         DragState::Active { session } if session.window == wid
                     ) {
-                        if let Some(space) = new_space {
-                            if let DragState::Active { session } =
+                        if let Some(space) = new_space
+                            && let DragState::Active { session } =
                                 &mut reactor.drag_manager.drag_state
-                            {
-                                if session.window == wid {
+                                && session.window == wid {
                                     session.settled_space = Some(space);
                                     session.layout_dirty = true;
                                 }
-                            }
-                        }
-                    } else {
-                        if let Some(space) = new_space {
-                            if reactor.is_space_active(space) {
-                                if let Some(active_ws) =
-                                    reactor.layout_manager.layout_engine.active_workspace(space)
-                                {
-                                    let assigned = reactor
-                                        .layout_manager
-                                        .layout_engine
-                                        .virtual_workspace_manager_mut()
-                                        .assign_window_to_workspace(space, wid, active_ws);
-                                    if !assigned {
-                                        warn!(
-                                            "Failed to assign window {:?} to workspace {:?}",
-                                            wid, active_ws
-                                        );
-                                    }
+                    } else if let Some(space) = new_space {
+                        if reactor.is_space_active(space) {
+                            if let Some(active_ws) =
+                                reactor.layout_manager.layout_engine.active_workspace(space)
+                            {
+                                let assigned = reactor
+                                    .layout_manager
+                                    .layout_engine
+                                    .virtual_workspace_manager_mut()
+                                    .assign_window_to_workspace(space, wid, active_ws);
+                                if !assigned {
+                                    warn!(
+                                        "Failed to assign window {:?} to workspace {:?}",
+                                        wid, active_ws
+                                    );
                                 }
-                                reactor.send_layout_event(LayoutEvent::WindowAdded(space, wid));
-                                let _ = reactor.update_layout(false, false).unwrap_or_else(|e| {
-                                    warn!("Layout update failed: {}", e);
-                                    false
-                                });
-                            } else {
-                                reactor.send_layout_event(LayoutEvent::WindowRemoved(wid));
-                                let _ = reactor.update_layout(false, false).unwrap_or_else(|e| {
-                                    warn!("Layout update failed: {}", e);
-                                    false
-                                });
                             }
+                            reactor.send_layout_event(LayoutEvent::WindowAdded(space, wid));
+                            let _ = reactor.update_layout(false, false).unwrap_or_else(|e| {
+                                warn!("Layout update failed: {}", e);
+                                false
+                            });
                         } else {
                             reactor.send_layout_event(LayoutEvent::WindowRemoved(wid));
                             let _ = reactor.update_layout(false, false).unwrap_or_else(|e| {
@@ -434,10 +417,16 @@ impl WindowEventHandler {
                                 false
                             });
                         }
+                    } else {
+                        reactor.send_layout_event(LayoutEvent::WindowRemoved(wid));
+                        let _ = reactor.update_layout(false, false).unwrap_or_else(|e| {
+                            warn!("Layout update failed: {}", e);
+                            false
+                        });
                     }
                 } else if old_frame.size != new_frame.size {
-                    if let Some(space) = old_space {
-                        if reactor.is_space_active(space) {
+                    if let Some(space) = old_space
+                        && reactor.is_space_active(space) {
                             reactor.send_layout_event(LayoutEvent::WindowResized {
                                 wid,
                                 old_frame,
@@ -446,7 +435,6 @@ impl WindowEventHandler {
                             });
                             return true;
                         }
-                    }
                     return false;
                 }
             }
@@ -482,11 +470,10 @@ impl WindowEventHandler {
             reactor.best_space_for_window(&window.frame_monotonic, window.window_server_id)
         });
 
-        if let Some(space) = space {
-            if reactor.is_space_active(space) {
+        if let Some(space) = space
+            && reactor.is_space_active(space) {
                 reactor.send_layout_event(LayoutEvent::WindowFocused(space, wid));
             }
-        }
     }
 }
 

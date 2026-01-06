@@ -23,20 +23,18 @@ pub fn compute_window_manageability(
     }
 
     if let Some(wsid) = window_server_id {
-        if let Some(info) = window_server_info.get(&wsid) {
-            if info.layer != 0 {
+        if let Some(info) = window_server_info.get(&wsid)
+            && info.layer != 0 {
                 return false;
             }
-        }
         if window_is_sticky(wsid) {
             return false;
         }
 
-        if let Some(level) = window_level(wsid.0) {
-            if level != NSNormalWindowLevel {
+        if let Some(level) = window_level(wsid.0)
+            && level != NSNormalWindowLevel {
                 return false;
             }
-        }
     }
     is_ax_standard && is_ax_root
 }

@@ -39,7 +39,7 @@ impl AppEventHandler {
                     .window_manager
                     .windows
                     .get(wid)
-                    .map_or(false, |window| window.is_manageable)
+                    .is_some_and(|window| window.is_manageable)
             })
             .collect();
 
@@ -51,11 +51,10 @@ impl AppEventHandler {
     }
 
     pub fn handle_application_terminated(reactor: &mut Reactor, pid: i32) {
-        if let Some(app) = reactor.app_manager.apps.get_mut(&pid) {
-            if let Err(e) = app.handle.send(crate::actor::app::Request::Terminate) {
+        if let Some(app) = reactor.app_manager.apps.get_mut(&pid)
+            && let Err(e) = app.handle.send(crate::actor::app::Request::Terminate) {
                 warn!("Failed to send Terminate to app {}: {}", pid, e);
             }
-        }
     }
 
     pub fn handle_application_thread_terminated(reactor: &mut Reactor, pid: i32) {
@@ -79,30 +78,26 @@ impl AppEventHandler {
 
     pub fn handle_resync_app_for_window(reactor: &mut Reactor, wsid: WindowServerId) {
         if let Some(&wid) = reactor.window_manager.window_ids.get(&wsid) {
-            if let Some(app_state) = reactor.app_manager.apps.get(&wid.pid) {
-                if let Err(e) = app_state
+            if let Some(app_state) = reactor.app_manager.apps.get(&wid.pid)
+                && let Err(e) = app_state
                     .handle
                     .send(crate::actor::app::Request::GetVisibleWindows { force_refresh: true })
                 {
                     warn!("Failed to send GetVisibleWindows to app {}: {}", wid.pid, e);
                 }
-            }
         } else if let Some(info) = reactor
             .window_server_info_manager
             .window_server_info
             .get(&wsid)
             .cloned()
             .or_else(|| window_server::get_window(wsid))
-        {
-            if let Some(app_state) = reactor.app_manager.apps.get(&info.pid) {
-                if let Err(e) = app_state
+            && let Some(app_state) = reactor.app_manager.apps.get(&info.pid)
+                && let Err(e) = app_state
                     .handle
                     .send(crate::actor::app::Request::GetVisibleWindows { force_refresh: true })
                 {
                     warn!("Failed to send GetVisibleWindows to app {}: {}", info.pid, e);
                 }
-            }
-        }
     }
 
     pub fn handle_application_activated(reactor: &mut Reactor, pid: i32, quiet: Quiet) {

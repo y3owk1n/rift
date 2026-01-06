@@ -35,9 +35,9 @@ impl SpaceId {
     }
 }
 
-impl Into<u64> for SpaceId {
-    fn into(self) -> u64 {
-        self.get()
+impl From<SpaceId> for u64 {
+    fn from(val: SpaceId) -> Self {
+        val.get()
     }
 }
 
@@ -501,13 +501,12 @@ impl System for Actual {
         }
 
         for screen in screens {
-            if let Ok(screen_id) = screen.get_number() {
-                if screen_id.as_u32() == did {
+            if let Ok(screen_id) = screen.get_number()
+                && screen_id.as_u32() == did {
                     #[allow(deprecated)]
                     let insets = screen.safeAreaInsets();
                     return insets.top;
                 }
-            }
         }
         0.0
     }

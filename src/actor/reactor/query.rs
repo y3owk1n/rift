@@ -23,7 +23,7 @@ impl Reactor {
             }
             Event::QueryActiveWorkspace { space_id, response } => {
                 let active = self.handle_active_workspace_query(space_id);
-                let _ = response.send(active);
+                response.send(active);
             }
             Event::QueryWindowInfo { window_id, response } => {
                 let window_info = self.handle_window_info_query(window_id);
@@ -82,7 +82,7 @@ impl Reactor {
         let mut workspaces = Vec::new();
 
         let space_id = space_id_param
-            .or_else(|| get_active_space_number())
+            .or_else(get_active_space_number)
             .or_else(|| self.space_manager.screens.first().and_then(|s| s.space));
         let workspace_list: Vec<(crate::model::VirtualWorkspaceId, String)> =
             if let Some(space) = space_id {
@@ -165,11 +165,10 @@ impl Reactor {
             let mut windows: Vec<WindowData> = Vec::new();
             for wid in workspace_windows_ids.into_iter() {
                 if let Some(mut wd) = self.create_window_data(wid) {
-                    if !is_active {
-                        if let Some(pred) = predicted_map.get(&wid).copied() {
+                    if !is_active
+                        && let Some(pred) = predicted_map.get(&wid).copied() {
                             wd.frame = pred;
                         }
-                    }
                     windows.push(wd);
                 }
             }
@@ -192,7 +191,7 @@ impl Reactor {
         space_id_param: Option<SpaceId>,
     ) -> Option<VirtualWorkspaceId> {
         let space_id = space_id_param
-            .or_else(|| get_active_space_number())
+            .or_else(get_active_space_number)
             .or_else(|| self.space_manager.screens.first().and_then(|s| s.space))?;
         self.layout_manager.layout_engine.active_workspace(space_id)
     }

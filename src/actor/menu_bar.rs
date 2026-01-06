@@ -108,7 +108,7 @@ impl Menu {
         let Some(icon) = &mut self.icon else { return };
 
         let sig = sig(
-            update.active_space.get() as u64,
+            update.active_space.get(),
             update.active_workspace_idx,
             &update.windows,
         );
@@ -153,8 +153,8 @@ impl Menu {
 
             let mut change: libc::kevent = std::mem::zeroed();
             change.ident = 1 as libc::uintptr_t;
-            change.filter = libc::EVFILT_TIMER as i16;
-            change.flags = (libc::EV_ADD | libc::EV_ENABLE) as u16;
+            change.filter = libc::EVFILT_TIMER;
+            change.flags = libc::EV_ADD | libc::EV_ENABLE ;
             change.fflags = 0;
             change.data = period_ms as libc::intptr_t;
             change.udata = std::ptr::null_mut();
