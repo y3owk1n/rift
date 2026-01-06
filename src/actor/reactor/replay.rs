@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 #[cfg(test)]
 use tempfile::NamedTempFile;

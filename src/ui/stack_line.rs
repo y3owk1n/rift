@@ -188,9 +188,10 @@ impl GroupIndicatorWindow {
         self.update_layers();
 
         if let Some(old_index) = old_selected
-            && old_index != group_data.selected_index {
-                self.animate_selection_change(group_data.selected_index);
-            }
+            && old_index != group_data.selected_index
+        {
+            self.animate_selection_change(group_data.selected_index);
+        }
 
         self.present();
         self.cgs_window.order_above(None)
@@ -685,13 +686,8 @@ impl GroupIndicatorWindow {
 
     fn present(&self) {
         let frame = *self.frame.borrow();
-        let ctx: *mut CGContext = unsafe {
-            SLWindowContextCreate(
-                *G_CONNECTION,
-                self.cgs_window.id(),
-                ptr::null_mut(),
-            )
-        };
+        let ctx: *mut CGContext =
+            unsafe { SLWindowContextCreate(*G_CONNECTION, self.cgs_window.id(), ptr::null_mut()) };
         if ctx.is_null() {
             return;
         }

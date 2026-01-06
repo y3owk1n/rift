@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use tracing::debug;
 
@@ -9,7 +12,7 @@ use crate::actor::app::{AppThreadHandle, Request, WindowId};
 use crate::common::collections::BTreeMap;
 use crate::common::config::Config;
 use crate::layout_engine::LayoutEngine;
-use crate::sys::app::{pid_t, AppInfo, WindowInfo};
+use crate::sys::app::{AppInfo, WindowInfo, pid_t};
 use crate::sys::geometry::SameAs;
 use crate::sys::screen::SpaceId;
 use crate::sys::window_server::{WindowServerId, WindowServerInfo};
@@ -22,7 +25,8 @@ impl Reactor {
         config.settings.animate = false;
         let record = Record::new_for_test(tempfile::NamedTempFile::new().unwrap());
         let (broadcast_tx, _) = actor::channel();
-        Reactor::new(config, layout, record, broadcast_tx, None)
+        let mc_active = Arc::new(AtomicBool::new(false));
+        Reactor::new(config, layout, record, broadcast_tx, None, mc_active)
     }
 
     pub fn handle_events(&mut self, events: Vec<Event>) {

@@ -90,7 +90,9 @@ impl WindowQuery {
             return None;
         }
         let cf_numbers = cf_array_from_ids(ids);
-        unsafe { Self::new_from_cfarray(CFRetained::as_ptr(&cf_numbers).as_ptr(), ids.len() as c_int) }
+        unsafe {
+            Self::new_from_cfarray(CFRetained::as_ptr(&cf_numbers).as_ptr(), ids.len() as c_int)
+        }
     }
 
     /// expected_count is a hint; keep whatever you used at call sites (0, 1, ids.len()).
@@ -199,7 +201,8 @@ pub fn connection_id_for_pid(pid: pid_t) -> Option<i32> {
 
 pub fn window_parent(id: WindowServerId) -> Option<WindowServerId> {
     let cf_windows = cf_array_from_ids(&[id]);
-    let query = unsafe { WindowQuery::new_from_cfarray(CFRetained::as_ptr(&cf_windows).as_ptr(), 1)? };
+    let query =
+        unsafe { WindowQuery::new_from_cfarray(CFRetained::as_ptr(&cf_windows).as_ptr(), 1)? };
     if query.count() == 1 {
         let p = query.advance()?.parent_id();
         (p != 0).then(|| WindowServerId::new(p))
@@ -248,7 +251,8 @@ pub fn window_spaces(id: WindowServerId) -> Vec<crate::sys::screen::SpaceId> {
         .iter()
         .filter_map(|num| num.as_i64())
         .filter_map(|value| u64::try_from(value).ok())
-        .filter(|&value| value != 0 ).map(crate::sys::screen::SpaceId::new)
+        .filter(|&value| value != 0)
+        .map(crate::sys::screen::SpaceId::new)
         .collect()
 }
 
@@ -258,8 +262,7 @@ pub fn window_space(id: WindowServerId) -> Option<crate::sys::screen::SpaceId> {
 
 pub fn window_is_ordered_in(id: WindowServerId) -> bool {
     let mut ordered: u8 = 0;
-    if cg_ok(unsafe { SLSWindowIsOrderedIn(*G_CONNECTION, id.as_u32(), &mut ordered) }).is_ok()
-    {
+    if cg_ok(unsafe { SLSWindowIsOrderedIn(*G_CONNECTION, id.as_u32(), &mut ordered) }).is_ok() {
         return ordered != 0;
     }
 
@@ -414,10 +417,12 @@ pub fn window_level(_wid: u32) -> Option<NSWindowLevel> {
 pub fn window_level(wid: u32) -> Option<NSWindowLevel> {
     let cf = cf_array_from_ids(&[WindowServerId::new(wid)]);
 
-    let query = unsafe { WindowQuery::new_from_cfarray(
-        CFRetained::as_ptr(&cf).as_ptr(),
-        0x1, // preserve your hint
-    )? };
+    let query = unsafe {
+        WindowQuery::new_from_cfarray(
+            CFRetained::as_ptr(&cf).as_ptr(),
+            0x1, // preserve your hint
+        )?
+    };
     Some(query.advance()?.level() as NSWindowLevel)
 }
 
@@ -608,12 +613,13 @@ pub fn window_space_id(cid: i32, wid: u32) -> u64 {
         let spaces_cf: CFRetained<CFArray<CFNumber>> =
             unsafe { CFRetained::from_raw(NonNull::new_unchecked(space_list_ref)) };
         if !spaces_cf.is_empty()
-            && let Some(id_ref) = spaces_cf.get(0) {
-                let n: &CFNumber = id_ref.as_ref();
-                if let Some(v) = n.as_i64() {
-                    sid = v as u64;
-                }
+            && let Some(id_ref) = spaces_cf.get(0)
+        {
+            let n: &CFNumber = id_ref.as_ref();
+            if let Some(v) = n.as_i64() {
+                sid = v as u64;
             }
+        }
     }
 
     if sid != 0 {
@@ -834,38 +840,40 @@ pub unsafe fn switch_space(direction: Direction) {
     CFRelease(event1a);
     CFRelease(event1b);
 
-    unsafe { queue::main().after_f_s(
-        Time::new_after(Time::NOW, 15 * 1000000),
-        (magnitude, magnitude_bits),
-        |(magnitude, magnitude_bits)| {
-            let gesture = 200.0 * magnitude;
+    unsafe {
+        queue::main().after_f_s(
+            Time::new_after(Time::NOW, 15 * 1000000),
+            (magnitude, magnitude_bits),
+            |(magnitude, magnitude_bits)| {
+                let gesture = 200.0 * magnitude;
 
-            let event2a = CGEventCreate(std::ptr::null_mut());
-            CGEventSetIntegerValueField(event2a, 0x37, 29);
-            CGEventSetIntegerValueField(event2a, 0x29, 33231);
+                let event2a = CGEventCreate(std::ptr::null_mut());
+                CGEventSetIntegerValueField(event2a, 0x37, 29);
+                CGEventSetIntegerValueField(event2a, 0x29, 33231);
 
-            let event2b = CGEventCreate(std::ptr::null_mut());
-            CGEventSetIntegerValueField(event2b, 0x37, 30);
-            CGEventSetIntegerValueField(event2b, 0x6E, 23);
-            CGEventSetIntegerValueField(event2b, 0x84, 4);
-            CGEventSetIntegerValueField(event2b, 0x86, 4);
-            CGEventSetDoubleValueField(event2b, 0x7C, magnitude);
-            CGEventSetIntegerValueField(event2b, 0x87, magnitude_bits);
-            CGEventSetIntegerValueField(event2b, 0x7B, 1);
-            CGEventSetIntegerValueField(event2b, 0xA5, 1);
-            CGEventSetDoubleValueField(event2b, 0x75, 1.401298464324817e-45);
-            CGEventSetDoubleValueField(event2b, 0x8B, 1.401298464324817e-45);
-            CGEventSetIntegerValueField(event2b, 0x29, 33231);
-            CGEventSetIntegerValueField(event2b, 0x88, 0);
+                let event2b = CGEventCreate(std::ptr::null_mut());
+                CGEventSetIntegerValueField(event2b, 0x37, 30);
+                CGEventSetIntegerValueField(event2b, 0x6E, 23);
+                CGEventSetIntegerValueField(event2b, 0x84, 4);
+                CGEventSetIntegerValueField(event2b, 0x86, 4);
+                CGEventSetDoubleValueField(event2b, 0x7C, magnitude);
+                CGEventSetIntegerValueField(event2b, 0x87, magnitude_bits);
+                CGEventSetIntegerValueField(event2b, 0x7B, 1);
+                CGEventSetIntegerValueField(event2b, 0xA5, 1);
+                CGEventSetDoubleValueField(event2b, 0x75, 1.401298464324817e-45);
+                CGEventSetDoubleValueField(event2b, 0x8B, 1.401298464324817e-45);
+                CGEventSetIntegerValueField(event2b, 0x29, 33231);
+                CGEventSetIntegerValueField(event2b, 0x88, 0);
 
-            CGEventSetDoubleValueField(event2b, 0x81, gesture);
-            CGEventSetDoubleValueField(event2b, 0x82, gesture);
+                CGEventSetDoubleValueField(event2b, 0x81, gesture);
+                CGEventSetDoubleValueField(event2b, 0x82, gesture);
 
-            CGEventPost(CGEventTapLocation::HID, event2b);
-            CGEventPost(CGEventTapLocation::HID, event2a);
+                CGEventPost(CGEventTapLocation::HID, event2b);
+                CGEventPost(CGEventTapLocation::HID, event2a);
 
-            CFRelease(event2a);
-            CFRelease(event2b);
-        },
-    ) };
+                CFRelease(event2a);
+                CFRelease(event2b);
+            },
+        )
+    };
 }

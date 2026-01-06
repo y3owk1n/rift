@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use clap::{Parser, Subcommand};
 use objc2::MainThreadMarker;
@@ -147,7 +147,8 @@ Enable it in System Settings > Desktop & Dock (Mission Control) and restart Rift
         }
         Err(_) => {
             println!("No config file found, using default configuration");
-            Config::default_config().expect("Failed to parse embedded default config - this is a bug")
+            Config::default_config()
+                .expect("Failed to parse embedded default config - this is a bug")
         }
     };
     config.settings.animate &= !opt.no_animate;

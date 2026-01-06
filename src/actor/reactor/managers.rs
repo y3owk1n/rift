@@ -311,56 +311,53 @@ impl LayoutManager {
         let stack_line_vert = reactor.config_manager.config.settings.ui.stack_line.vert_placement;
 
         for (space, layout) in layout_result {
-            if stack_line_enabled
-                && let Some(tx) = &reactor.communication_manager.stack_line_tx {
-                    let screen = reactor.space_manager.screen_by_space(space);
-                    if let Some(screen) = screen {
-                        let display_uuid = if screen.display_uuid.is_empty() {
-                            None
-                        } else {
-                            Some(screen.display_uuid.as_str())
-                        };
-                        let gaps = reactor
-                            .config_manager
-                            .config
-                            .settings
-                            .layout
-                            .gaps
-                            .effective_for_display(display_uuid);
-                        let group_infos = reactor
-                            .layout_manager
-                            .layout_engine
-                            .collect_group_containers_in_selection_path(
-                                space,
-                                screen.frame,
-                                &gaps,
-                                stack_line_thickness,
-                                stack_line_horiz,
-                                stack_line_vert,
-                            );
+            if stack_line_enabled && let Some(tx) = &reactor.communication_manager.stack_line_tx {
+                let screen = reactor.space_manager.screen_by_space(space);
+                if let Some(screen) = screen {
+                    let display_uuid = if screen.display_uuid.is_empty() {
+                        None
+                    } else {
+                        Some(screen.display_uuid.as_str())
+                    };
+                    let gaps = reactor
+                        .config_manager
+                        .config
+                        .settings
+                        .layout
+                        .gaps
+                        .effective_for_display(display_uuid);
+                    let group_infos = reactor
+                        .layout_manager
+                        .layout_engine
+                        .collect_group_containers_in_selection_path(
+                            space,
+                            screen.frame,
+                            &gaps,
+                            stack_line_thickness,
+                            stack_line_horiz,
+                            stack_line_vert,
+                        );
 
-                        let groups: Vec<crate::actor::stack_line::GroupInfo> = group_infos
-                            .into_iter()
-                            .map(|g| crate::actor::stack_line::GroupInfo {
-                                node_id: g.node_id,
-                                space_id: space,
-                                container_kind: g.container_kind,
-                                frame: g.frame,
-                                total_count: g.total_count,
-                                selected_index: g.selected_index,
-                                window_ids: g.window_ids,
-                            })
-                            .collect();
-                        if let Err(e) =
-                            tx.try_send(crate::actor::stack_line::Event::GroupsUpdated {
-                                space_id: space,
-                                groups,
-                            })
-                        {
-                            tracing::warn!("Failed to send groups update to stack_line: {}", e);
-                        }
+                    let groups: Vec<crate::actor::stack_line::GroupInfo> = group_infos
+                        .into_iter()
+                        .map(|g| crate::actor::stack_line::GroupInfo {
+                            node_id: g.node_id,
+                            space_id: space,
+                            container_kind: g.container_kind,
+                            frame: g.frame,
+                            total_count: g.total_count,
+                            selected_index: g.selected_index,
+                            window_ids: g.window_ids,
+                        })
+                        .collect();
+                    if let Err(e) = tx.try_send(crate::actor::stack_line::Event::GroupsUpdated {
+                        space_id: space,
+                        groups,
+                    }) {
+                        tracing::warn!("Failed to send groups update to stack_line: {}", e);
                     }
                 }
+            }
 
             let suppress_animation = is_workspace_switch
                 || reactor.workspace_switch_manager.active_workspace_switch.is_some();

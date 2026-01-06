@@ -1,6 +1,6 @@
 use std::cell::Cell;
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::ffi::c_void;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -10,10 +10,10 @@ use dispatchr::time::Time;
 pub use nix::libc::pid_t;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
-use objc2::{define_class, msg_send, AnyThread, DefinedClass};
+use objc2::{AnyThread, DefinedClass, define_class, msg_send};
 use objc2_app_kit::{NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace};
 use objc2_core_foundation::CGRect;
-use objc2_foundation::{ns_string, NSCopying, NSObject, NSObjectProtocol, NSString};
+use objc2_foundation::{NSCopying, NSObject, NSObjectProtocol, NSString, ns_string};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use super::geometry::CGRectDef;
 use super::window_server::{WindowServerId, WindowServerInfo};
 use crate::sys::axuielement::{
-    AXUIElement, Error as AxError, AX_STANDARD_WINDOW_SUBROLE, AX_WINDOW_ROLE,
+    AX_STANDARD_WINDOW_SUBROLE, AX_WINDOW_ROLE, AXUIElement, Error as AxError,
 };
 use crate::sys::dispatch::DispatchExt;
 

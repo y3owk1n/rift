@@ -3,7 +3,7 @@ use dispatchr::time::Time;
 use std::num::NonZeroU32;
 use tracing::{debug, warn};
 
-use crate::actor::app::{pid_t, WindowId};
+use crate::actor::app::{WindowId, pid_t};
 use crate::actor::raise_manager;
 use crate::actor::reactor::{MenuState, Reactor};
 use crate::actor::wm_controller::Sender as WmSender;

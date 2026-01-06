@@ -36,9 +36,9 @@ impl SpaceEventHandler {
                 if let Some(app_state) = reactor.app_manager.apps.get(&wid.pid)
                     && let Err(e) =
                         app_state.handle.send(Request::MarkWindowsNeedingInfo(vec![wid]))
-                    {
-                        warn!("Failed to send MarkWindowsNeedingInfo: {}", e);
-                    }
+                {
+                    warn!("Failed to send MarkWindowsNeedingInfo: {}", e);
+                }
                 return;
             } else if let Some(info) =
                 reactor.window_server_info_manager.window_server_info.get(&wsid)
@@ -139,9 +139,9 @@ impl SpaceEventHandler {
                     if let Some(app_state) = reactor.app_manager.apps.get(&wid.pid)
                         && let Err(e) =
                             app_state.handle.send(Request::MarkWindowsNeedingInfo(vec![wid]))
-                        {
-                            warn!("Failed to send MarkWindowsNeedingInfo: {}", e);
-                        }
+                    {
+                        warn!("Failed to send MarkWindowsNeedingInfo: {}", e);
+                    }
                 } else if let Some(app_state) =
                     reactor.app_manager.apps.get(&window_server_info.pid)
                 {
@@ -155,9 +155,9 @@ impl SpaceEventHandler {
                     if !resync.is_empty()
                         && let Err(e) =
                             app_state.handle.send(Request::MarkWindowsNeedingInfo(resync))
-                        {
-                            warn!("Failed to send MarkWindowsNeedingInfo: {}", e);
-                        }
+                    {
+                        warn!("Failed to send MarkWindowsNeedingInfo: {}", e);
+                    }
                 }
                 return;
             }
@@ -172,7 +172,9 @@ impl SpaceEventHandler {
                         ?app,
                         "Received WindowServerAppeared for unknown app - synthesizing AppLaunch"
                     );
-                    if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() { wm.send(WmEvent::AppLaunch(window_server_info.pid, AppInfo::from(&*app))) }
+                    if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() {
+                        wm.send(WmEvent::AppLaunch(window_server_info.pid, AppInfo::from(&*app)))
+                    }
                 } else {
                     warn!(
                         pid = window_server_info.pid,
@@ -181,7 +183,8 @@ impl SpaceEventHandler {
                     );
                     let fallback_info = AppInfo {
                         bundle_id: None,
-                        localized_name: format!("Unknown App (PID {})", window_server_info.pid).into(),
+                        localized_name: format!("Unknown App (PID {})", window_server_info.pid)
+                            .into(),
                     };
                     if let Some(wm) = reactor.communication_manager.wm_sender.as_ref() {
                         wm.send(WmEvent::AppLaunch(window_server_info.pid, fallback_info));
@@ -190,14 +193,14 @@ impl SpaceEventHandler {
             } else if let Some(app) = reactor.app_manager.apps.get(&window_server_info.pid)
                 && let Err(err) =
                     app.handle.send(Request::GetVisibleWindows { force_refresh: false })
-                {
-                    warn!(
-                        pid = window_server_info.pid,
-                        ?wsid,
-                        ?err,
-                        "Failed to refresh windows after WindowServerAppeared"
-                    );
-                }
+            {
+                warn!(
+                    pid = window_server_info.pid,
+                    ?wsid,
+                    ?err,
+                    "Failed to refresh windows after WindowServerAppeared"
+                );
+            }
         }
     }
 

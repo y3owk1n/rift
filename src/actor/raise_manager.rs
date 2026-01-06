@@ -146,23 +146,25 @@ impl RaiseManager {
 
                 // Remove this window from the active sequence's pending raises
                 if let Some(sequence) = &mut self.active_sequence
-                    && sequence.sequence_id == sequence_id {
-                        sequence.pending_raises.remove(&window_id);
-                    }
+                    && sequence.sequence_id == sequence_id
+                {
+                    sequence.pending_raises.remove(&window_id);
+                }
             }
             Event::RaiseTimeout { sequence_id } => {
                 trace!("Raise sequence {} timed out", sequence_id);
 
                 // Clear pending raises for the active sequence if it matches
                 if let Some(sequence) = &mut self.active_sequence
-                    && sequence.sequence_id == sequence_id {
-                        warn!(
-                            "Sequence {} timed out, clearing pending raises: {:?}",
-                            sequence_id, sequence.pending_raises
-                        );
-                        sequence.pending_raises.clear();
-                        sequence.raise_token.cancel();
-                    }
+                    && sequence.sequence_id == sequence_id
+                {
+                    warn!(
+                        "Sequence {} timed out, clearing pending raises: {:?}",
+                        sequence_id, sequence.pending_raises
+                    );
+                    sequence.pending_raises.clear();
+                    sequence.raise_token.cancel();
+                }
             }
         }
 
@@ -179,10 +181,11 @@ impl RaiseManager {
 
     fn process_queued_responses(&mut self) -> bool {
         if self.active_sequence.is_none()
-            && let Some(queued) = self.queued_sequences.pop_front() {
-                self.start_new_sequence(queued);
-                return true;
-            }
+            && let Some(queued) = self.queued_sequences.pop_front()
+        {
+            self.start_new_sequence(queued);
+            return true;
+        }
         false
     }
 

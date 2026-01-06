@@ -42,7 +42,6 @@ impl WindowTxStore {
     }
 
     pub fn next_txid(&self, id: WindowServerId) -> TransactionId {
-        
         match self.0.entry(id) {
             Entry::Occupied(mut entry) => {
                 let record = entry.get_mut();

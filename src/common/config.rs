@@ -209,12 +209,13 @@ impl VirtualWorkspaceSettings {
 
             if let Some(ref workspace) = rule.workspace
                 && let WorkspaceSelector::Index(idx) = workspace
-                    && *idx >= self.default_workspace_count {
-                        issues.push(format!(
-                            "App rule {} references workspace {} but only {} workspaces will be created",
-                            index, idx, self.default_workspace_count
-                        ));
-                    }
+                && *idx >= self.default_workspace_count
+            {
+                issues.push(format!(
+                    "App rule {} references workspace {} but only {} workspaces will be created",
+                    index, idx, self.default_workspace_count
+                ));
+            }
 
             if let Some(ref app_id) = rule.app_id {
                 if !app_id.is_empty() && !app_id.contains('.') {
@@ -235,9 +236,10 @@ impl VirtualWorkspaceSettings {
             }
 
             if let Some(ref app_name) = rule.app_name
-                && !seen_app_names.insert(app_name) {
-                    issues.push(format!("Duplicate app_name '{}' in rule {}", app_name, index));
-                }
+                && !seen_app_names.insert(app_name)
+            {
+                issues.push(format!("Duplicate app_name '{}' in rule {}", app_name, index));
+            }
 
             if let Some(ref title_re) = rule.title_regex {
                 if title_re.is_empty() {
@@ -747,14 +749,15 @@ impl GapSettings {
             per_display: HashMap::default(),
         };
         if let Some(uuid) = display_uuid
-            && let Some(overrides) = self.per_display.get(uuid) {
-                if let Some(outer_override) = &overrides.outer {
-                    resolved.outer = outer_override.clone();
-                }
-                if let Some(inner_override) = &overrides.inner {
-                    resolved.inner = inner_override.clone();
-                }
+            && let Some(overrides) = self.per_display.get(uuid)
+        {
+            if let Some(outer_override) = &overrides.outer {
+                resolved.outer = outer_override.clone();
             }
+            if let Some(inner_override) = &overrides.inner {
+                resolved.inner = inner_override.clone();
+            }
+        }
         resolved
     }
 }
@@ -904,9 +907,10 @@ impl Config {
 
         let toml_string = toml::to_string_pretty(&config_file)?;
         if let Some(parent) = path.parent()
-            && !parent.as_os_str().is_empty() {
-                std::fs::create_dir_all(parent)?;
-            }
+            && !parent.as_os_str().is_empty()
+        {
+            std::fs::create_dir_all(parent)?;
+        }
         std::fs::write(path, toml_string.as_bytes())?;
 
         Ok(())
@@ -1056,12 +1060,13 @@ impl Config {
         }
 
         if let Some(unknown_pos) = err.find("unknown")
-            && let Some(backtick_pos) = err[unknown_pos..].find('`') {
-                let rest = &err[unknown_pos + backtick_pos + 1..];
-                if let Some(end) = rest.find('`') {
-                    return Some(rest[..end].to_string());
-                }
+            && let Some(backtick_pos) = err[unknown_pos..].find('`')
+        {
+            let rest = &err[unknown_pos + backtick_pos + 1..];
+            if let Some(end) = rest.find('`') {
+                return Some(rest[..end].to_string());
             }
+        }
         None
     }
 
@@ -1240,7 +1245,10 @@ mod tests {
 
     #[test]
     fn test_workspace_settings_validation_empty_workspace_count() {
-        let settings = VirtualWorkspaceSettings { default_workspace_count: 0, ..Default::default() };
+        let settings = VirtualWorkspaceSettings {
+            default_workspace_count: 0,
+            ..Default::default()
+        };
         let issues = settings.validate();
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|i| i.contains("default_workspace_count must be at least 1")));
@@ -1248,7 +1256,10 @@ mod tests {
 
     #[test]
     fn test_workspace_settings_validation_excessive_workspaces() {
-        let settings = VirtualWorkspaceSettings { default_workspace_count: 100, ..Default::default() };
+        let settings = VirtualWorkspaceSettings {
+            default_workspace_count: 100,
+            ..Default::default()
+        };
         let issues = settings.validate();
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|i| i.contains("should not exceed")));
@@ -1372,14 +1383,20 @@ mod tests {
 
     #[test]
     fn test_settings_validation_negative_animation_duration() {
-        let settings = Settings { animation_duration: -1.0, ..Default::default() };
+        let settings = Settings {
+            animation_duration: -1.0,
+            ..Default::default()
+        };
         let issues = settings.validate();
         assert!(issues.iter().any(|i| i.contains("animation_duration must be non-negative")));
     }
 
     #[test]
     fn test_settings_validation_zero_animation_fps() {
-        let settings = Settings { animation_fps: 0.0, ..Default::default() };
+        let settings = Settings {
+            animation_fps: 0.0,
+            ..Default::default()
+        };
         let issues = settings.validate();
         assert!(issues.iter().any(|i| i.contains("animation_fps must be positive")));
     }
@@ -1398,21 +1415,32 @@ mod tests {
 
     #[test]
     fn test_stack_settings_validation_negative_offset() {
-        let stack = StackSettings { stack_offset: -5.0, ..Default::default() };
+        let stack = StackSettings {
+            stack_offset: -5.0,
+            ..Default::default()
+        };
         let issues = stack.validate();
         assert!(issues.iter().any(|i| i.contains("stack_offset must be non-negative")));
     }
 
     #[test]
     fn test_outer_gaps_validation_negative_values() {
-        let gaps = OuterGaps { top: -1.0, left: -2.0, bottom: -3.0, right: -4.0 };
+        let gaps = OuterGaps {
+            top: -1.0,
+            left: -2.0,
+            bottom: -3.0,
+            right: -4.0,
+        };
         let issues = gaps.validate();
         assert_eq!(4, issues.len());
     }
 
     #[test]
     fn test_inner_gaps_validation_negative_values() {
-        let gaps = InnerGaps { horizontal: -1.0, vertical: -2.0 };
+        let gaps = InnerGaps {
+            horizontal: -1.0,
+            vertical: -2.0,
+        };
         let issues = gaps.validate();
         assert_eq!(2, issues.len());
     }
@@ -1460,8 +1488,8 @@ mod tests {
 
     #[test]
     fn test_config_validate_empty_is_valid() {
-        let config =
-            Config::default_config().expect("Failed to parse embedded default config - this is a bug");
+        let config = Config::default_config()
+            .expect("Failed to parse embedded default config - this is a bug");
         let issues = config.validate();
         assert!(issues.is_empty(), "Expected no issues, got: {:?}", issues);
     }

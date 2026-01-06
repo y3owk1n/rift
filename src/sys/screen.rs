@@ -502,11 +502,12 @@ impl System for Actual {
 
         for screen in screens {
             if let Some(screen_id) = screen.get_number()
-                && screen_id.as_u32() == did {
-                    #[allow(deprecated)]
-                    let insets = screen.safeAreaInsets();
-                    return insets.top;
-                }
+                && screen_id.as_u32() == did
+            {
+                #[allow(deprecated)]
+                let insets = screen.safeAreaInsets();
+                return insets.top;
+            }
         }
         0.0
     }

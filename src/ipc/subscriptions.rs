@@ -87,14 +87,13 @@ impl ServerState {
             }
         }
 
-        if removed
-            && let Some(mut entry) = self.subscriptions_by_event.get_mut(&event) {
-                entry.retain(|c| c != &client_port);
-                if entry.is_empty() {
-                    drop(entry);
-                    self.subscriptions_by_event.remove(&event);
-                }
+        if removed && let Some(mut entry) = self.subscriptions_by_event.get_mut(&event) {
+            entry.retain(|c| c != &client_port);
+            if entry.is_empty() {
+                drop(entry);
+                self.subscriptions_by_event.remove(&event);
             }
+        }
     }
 
     pub fn subscribe_cli(&self, event: String, command: String, args: Vec<String>) {
@@ -240,11 +239,15 @@ impl ServerState {
 
 fn schedule_event_send(client_port: ClientPort, event_json: String) {
     match queue::global(dispatchr::QoS::Utility) {
-        Some(q) => unsafe { q.after_f_s(
-            Time::new_after(Time::NOW, (0.1 * 1000000.0) as i64),
-            (client_port, event_json),
-            |(client_port, event_json)| ServerState::send_event_to_client(client_port, &event_json),
-        ) },
+        Some(q) => unsafe {
+            q.after_f_s(
+                Time::new_after(Time::NOW, (0.1 * 1000000.0) as i64),
+                (client_port, event_json),
+                |(client_port, event_json)| {
+                    ServerState::send_event_to_client(client_port, &event_json)
+                },
+            )
+        },
         None => ServerState::send_event_to_client(client_port, &event_json),
     }
 }

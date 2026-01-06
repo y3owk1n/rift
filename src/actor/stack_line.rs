@@ -5,9 +5,9 @@ use objc2::MainThreadMarker;
 use objc2_core_foundation::{CGPoint, CGRect, CGSize};
 use tracing::instrument;
 
-use crate::actor::{self, reactor};
-use crate::actor::reactor::{Command, ReactorCommand};
 use crate::actor::app::WindowId;
+use crate::actor::reactor::{Command, ReactorCommand};
+use crate::actor::{self, reactor};
 use crate::common::collections::HashMap;
 use crate::common::config::{Config, HorizontalPlacement, VerticalPlacement};
 use crate::layout_engine::LayoutKind;
@@ -169,13 +169,14 @@ impl StackLine {
             let new_config = self.indicator_config();
             for (node_id, indicator) in &self.indicators {
                 if let Some(group_data) = indicator.group_data()
-                    && let Err(err) = indicator.update(new_config, group_data) {
-                        tracing::warn!(
-                            ?err,
-                            ?node_id,
-                            "failed to update stack line indicator with new config"
-                        );
-                    }
+                    && let Err(err) = indicator.update(new_config, group_data)
+                {
+                    tracing::warn!(
+                        ?err,
+                        ?node_id,
+                        "failed to update stack line indicator with new config"
+                    );
+                }
             }
         }
 
@@ -186,16 +187,31 @@ impl StackLine {
         if let Some(indicator) = self.indicators.get(&node_id) {
             let window_ids = indicator.window_ids();
             if let Some(window_id) = window_ids.get(segment_index) {
-                tracing::debug!(?node_id, segment_index, ?window_id, "Group indicator clicked - focusing window");
-                let _ = self.reactor_tx.send(reactor::Event::Command(Command::Reactor(ReactorCommand::FocusWindow {
-                    window_id: *window_id,
-                    window_server_id: None,
-                })));
+                tracing::debug!(
+                    ?node_id,
+                    segment_index,
+                    ?window_id,
+                    "Group indicator clicked - focusing window"
+                );
+                self.reactor_tx.send(reactor::Event::Command(Command::Reactor(
+                    ReactorCommand::FocusWindow {
+                        window_id: *window_id,
+                        window_server_id: None,
+                    },
+                )));
             } else {
-                tracing::debug!(?node_id, segment_index, "Group indicator clicked with invalid segment index");
+                tracing::debug!(
+                    ?node_id,
+                    segment_index,
+                    "Group indicator clicked with invalid segment index"
+                );
             }
         } else {
-            tracing::debug!(?node_id, segment_index, "Group indicator clicked but not found in map");
+            tracing::debug!(
+                ?node_id,
+                segment_index,
+                "Group indicator clicked but not found in map"
+            );
         }
     }
 

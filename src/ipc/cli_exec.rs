@@ -106,9 +106,7 @@ impl CliExecutor for DefaultCliExecutor {
             Ok(s) => s,
             Err(e) => {
                 error!("Failed to serialize event for CLI executor: {}", e);
-                return Err(std::io::Error::other(
-                    "serialization error",
-                ));
+                return Err(std::io::Error::other("serialization error"));
             }
         };
         env_vars.insert("RIFT_EVENT_JSON".to_string(), event_json.clone());

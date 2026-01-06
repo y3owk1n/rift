@@ -70,5 +70,5 @@ unsafe extern "C" {
 
     // Deprecated in macOS 10.9.
     fn GetProcessInformation(psn: *const ProcessSerialNumber, info: *mut ProcessInfoRec)
-        -> CGError;
+    -> CGError;
 }

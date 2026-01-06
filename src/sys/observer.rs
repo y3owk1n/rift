@@ -9,7 +9,7 @@ use dispatchr::queue;
 use dispatchr::time::Time;
 use objc2_application_services::{AXError, AXObserver, AXUIElement as RawAXUIElement};
 use objc2_core_foundation::{
-    kCFRunLoopCommonModes, CFRetained, CFRunLoop, CFRunLoopMode, CFString,
+    CFRetained, CFRunLoop, CFRunLoopMode, CFString, kCFRunLoopCommonModes,
 };
 
 use crate::sys::app::pid_t;

@@ -217,12 +217,13 @@ impl EventTap {
         }
 
         if this.config.settings.mouse_hides_on_focus
-            && let Err(e) = window_server::allow_hide_mouse() {
-                error!(
-                    "Could not enable mouse hiding: {e:?}. \
+            && let Err(e) = window_server::allow_hide_mouse()
+        {
+            error!(
+                "Could not enable mouse hiding: {e:?}. \
                     mouse_hides_on_focus will have no effect."
-                );
-            }
+            );
+        }
 
         while let Some((span, request)) = requests_rx.recv().await {
             let _ = span.enter();
@@ -250,9 +251,10 @@ impl EventTap {
             }
             Request::EnforceHidden => {
                 if state.hidden
-                    && let Err(e) = event::hide_mouse() {
-                        warn!("Failed to hide mouse: {e:?}");
-                    }
+                    && let Err(e) = event::hide_mouse()
+                {
+                    warn!("Failed to hide mouse: {e:?}");
+                }
             }
             Request::ScreenParametersChanged(frames, converter) => {
                 state.screens = frames;
@@ -296,10 +298,10 @@ impl EventTap {
         if event_type.0 == NSEventType::Gesture.0 as u32 {
             if let Some(handler) = &self.swipe
                 && let Some(nsevent) = NSEvent::eventWithCGEvent(event)
-                    && nsevent.r#type() == NSEventType::Gesture
-                {
-                    self.handle_gesture_event(handler, &nsevent);
-                }
+                && nsevent.r#type() == NSEventType::Gesture
+            {
+                self.handle_gesture_event(handler, &nsevent);
+            }
             return true;
         }
 
@@ -492,26 +494,27 @@ impl EventTap {
         }
 
         if event_type == CGEventType::KeyDown
-            && let Some(key_code) = key_code_opt {
-                let hotkey = Hotkey::new(
-                    modifiers_from_flags_with_keys(state.current_flags, &state.pressed_keys),
-                    key_code,
-                );
-                let commands = {
-                    let bindings = self.hotkeys.borrow();
-                    bindings.get(&hotkey).cloned()
-                };
-                if let Some(commands) = commands {
-                    if let Some(wm_sender) = &self.wm_sender {
-                        for cmd in commands {
-                            wm_sender.send(WmEvent::Command(cmd));
-                        }
-                        return false;
-                    } else {
-                        debug!(?hotkey, "Hotkey triggered but no WM sender available");
+            && let Some(key_code) = key_code_opt
+        {
+            let hotkey = Hotkey::new(
+                modifiers_from_flags_with_keys(state.current_flags, &state.pressed_keys),
+                key_code,
+            );
+            let commands = {
+                let bindings = self.hotkeys.borrow();
+                bindings.get(&hotkey).cloned()
+            };
+            if let Some(commands) = commands {
+                if let Some(wm_sender) = &self.wm_sender {
+                    for cmd in commands {
+                        wm_sender.send(WmEvent::Command(cmd));
                     }
+                    return false;
+                } else {
+                    debug!(?hotkey, "Hotkey triggered but no WM sender available");
                 }
             }
+        }
 
         true
     }

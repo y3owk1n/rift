@@ -65,11 +65,8 @@ fn find_rift_executable() -> io::Result<PathBuf> {
         }
     }
 
-    let exe_path = env::current_exe().map_err(|_| {
-        io::Error::other(
-            "unable to retrieve path of current executable",
-        )
-    })?;
+    let exe_path = env::current_exe()
+        .map_err(|_| io::Error::other("unable to retrieve path of current executable"))?;
     let sibling = exe_path.with_file_name("rift");
     if sibling.is_file() {
         let real = fs::canonicalize(&sibling).unwrap_or(sibling);
@@ -86,15 +83,11 @@ fn find_rift_executable() -> io::Result<PathBuf> {
 }
 
 fn plist_contents() -> io::Result<String> {
-    let user =
-        env::var("USER").map_err(|_| io::Error::other("env USER not set"))?;
-    let path_env =
-        env::var("PATH").map_err(|_| io::Error::other("env PATH not set"))?;
+    let user = env::var("USER").map_err(|_| io::Error::other("env USER not set"))?;
+    let path_env = env::var("PATH").map_err(|_| io::Error::other("env PATH not set"))?;
 
     let agent_exe = find_rift_executable()?;
-    let exe_str = agent_exe
-        .to_str()
-        .ok_or_else(|| io::Error::other("non-UTF8 executable path"))?;
+    let exe_str = agent_exe.to_str().ok_or_else(|| io::Error::other("non-UTF8 executable path"))?;
 
     let plist = format!(
         r#"<?xml version=\"1.0\" encoding=\"UTF-8\"?>
@@ -176,9 +169,10 @@ fn run_launchctl(args: &[&str], suppress_output: bool) -> io::Result<i32> {
         Ok(code)
     } else {
         let sig = status.signal().unwrap_or_default();
-        Err(io::Error::other(
-            format!("launchctl terminated by signal {}", sig),
-        ))
+        Err(io::Error::other(format!(
+            "launchctl terminated by signal {}",
+            sig
+        )))
     }
 }
 
@@ -262,18 +256,17 @@ pub fn service_start() -> io::Result<()> {
         if code == 0 {
             Ok(())
         } else {
-            Err(io::Error::other(
-                format!("kickstart after bootstrap failed (exit {})", code),
-            ))
+            Err(io::Error::other(format!(
+                "kickstart after bootstrap failed (exit {})",
+                code
+            )))
         }
     } else {
         let code = run_launchctl(&["kickstart", &service_target], false)?;
         if code == 0 {
             Ok(())
         } else {
-            Err(io::Error::other(
-                format!("kickstart failed (exit {})", code),
-            ))
+            Err(io::Error::other(format!("kickstart failed (exit {})", code)))
         }
     }
 }
@@ -293,9 +286,7 @@ pub fn service_restart() -> io::Result<()> {
     if code == 0 {
         Ok(())
     } else {
-        Err(io::Error::other(
-            format!("kickstart -k failed (exit {})", code),
-        ))
+        Err(io::Error::other(format!("kickstart -k failed (exit {})", code)))
     }
 }
 
@@ -319,9 +310,7 @@ pub fn service_stop() -> io::Result<()> {
         if code == 0 {
             Ok(())
         } else {
-            Err(io::Error::other(
-                format!("kill SIGTERM failed (exit {})", code),
-            ))
+            Err(io::Error::other(format!("kill SIGTERM failed (exit {})", code)))
         }
     } else {
         let code1 =
@@ -331,9 +320,10 @@ pub fn service_stop() -> io::Result<()> {
         if code1 == 0 && code2 == 0 {
             Ok(())
         } else {
-            Err(io::Error::other(
-                format!("bootout exit {}, disable exit {}", code1, code2),
-            ))
+            Err(io::Error::other(format!(
+                "bootout exit {}, disable exit {}",
+                code1, code2
+            )))
         }
     }
 }

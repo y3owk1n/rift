@@ -126,9 +126,10 @@ fn find_dock_pid() -> pid_t {
     let workspace = NSWorkspace::sharedWorkspace();
     for app in workspace.runningApplications().into_iter() {
         if let Some(bid) = app.bundle_id()
-            && bid.to_string() == "com.apple.dock" {
-                return app.processIdentifier();
-            }
+            && bid.to_string() == "com.apple.dock"
+        {
+            return app.processIdentifier();
+        }
     }
     0
 }

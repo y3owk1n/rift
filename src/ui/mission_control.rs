@@ -328,8 +328,13 @@ impl MissionControlState {
     fn set_selection(&mut self, selection: Selection) {
         let is_valid = matches!(
             (selection, self.mode.as_ref()),
-            (Selection::Workspace(_), Some(MissionControlMode::AllWorkspaces(_)))
-                | (Selection::Window(_), Some(MissionControlMode::CurrentWorkspace(_)))
+            (
+                Selection::Workspace(_),
+                Some(MissionControlMode::AllWorkspaces(_))
+            ) | (
+                Selection::Window(_),
+                Some(MissionControlMode::CurrentWorkspace(_))
+            )
         );
         if is_valid {
             self.selection = Some(selection);
@@ -357,10 +362,11 @@ impl MissionControlState {
                 }
             }
             if let Some(idx) = active_selection
-                && self.selection() != Some(Selection::Workspace(idx)) {
-                    self.selection = Some(Selection::Workspace(idx));
-                    changed = true;
-                }
+                && self.selection() != Some(Selection::Workspace(idx))
+            {
+                self.selection = Some(Selection::Workspace(idx));
+                changed = true;
+            }
             changed
         } else {
             false
@@ -1019,10 +1025,11 @@ impl MissionControlOverlay {
         };
 
         if let Some(selection) = new_selection
-            && state.selection() != Some(selection) {
-                state.set_selection(selection);
-                return true;
-            }
+            && state.selection() != Some(selection)
+        {
+            state.set_selection(selection);
+            return true;
+        }
         false
     }
 
@@ -1086,10 +1093,11 @@ impl MissionControlOverlay {
         };
 
         if let Some(selection) = new_selection
-            && state.selection() != Some(selection) {
-                state.set_selection(selection);
-                return true;
-            }
+            && state.selection() != Some(selection)
+        {
+            state.set_selection(selection);
+            return true;
+        }
         false
     }
 
@@ -1130,7 +1138,6 @@ impl MissionControlOverlay {
             let mode = state.mode();
             let selection = state.selection();
 
-            
             match (mode, selection) {
                 (
                     Some(MissionControlMode::AllWorkspaces(workspaces)),
@@ -1618,39 +1625,33 @@ impl MissionControlOverlay {
         CATransaction::commit();
 
         if !ready_ids.is_empty()
-            && let Ok(mut st) = state_cell.try_borrow_mut() {
-                for wid in ready_ids.iter().copied() {
-                    st.ready_previews.insert(wid);
-                }
-                if !st.suppress_live_present
-                    && let (Some(root), Some(wid), Some(size)) =
-                        (st.render_root.clone(), st.render_window_id, st.render_size)
-                    {
-                        unsafe {
-                            let ctx: *mut CGContext = SLWindowContextCreate(
-                                *G_CONNECTION,
-                                wid,
-                                core::ptr::null_mut(),
-                            );
-                            if !ctx.is_null() {
-                                let clear = CGRect::new(CGPoint::new(0.0, 0.0), size);
-                                CGContextClearRect(ctx, clear);
-                                CGContextSaveGState(ctx);
-                                CGContextTranslateCTM(ctx, 0.0, size.height);
-                                CGContextScaleCTM(ctx, 1.0, -1.0);
-                                root.renderInContext(&*ctx);
-                                CGContextRestoreGState(ctx);
-                                CGContextFlush(ctx);
-                                SLSFlushWindowContentRegion(
-                                    *G_CONNECTION,
-                                    wid,
-                                    std::ptr::null_mut(),
-                                );
-                                CFRelease(ctx as *mut CFType);
-                            }
-                        }
-                    }
+            && let Ok(mut st) = state_cell.try_borrow_mut()
+        {
+            for wid in ready_ids.iter().copied() {
+                st.ready_previews.insert(wid);
             }
+            if !st.suppress_live_present
+                && let (Some(root), Some(wid), Some(size)) =
+                    (st.render_root.clone(), st.render_window_id, st.render_size)
+            {
+                unsafe {
+                    let ctx: *mut CGContext =
+                        SLWindowContextCreate(*G_CONNECTION, wid, core::ptr::null_mut());
+                    if !ctx.is_null() {
+                        let clear = CGRect::new(CGPoint::new(0.0, 0.0), size);
+                        CGContextClearRect(ctx, clear);
+                        CGContextSaveGState(ctx);
+                        CGContextTranslateCTM(ctx, 0.0, size.height);
+                        CGContextScaleCTM(ctx, 1.0, -1.0);
+                        root.renderInContext(&*ctx);
+                        CGContextRestoreGState(ctx);
+                        CGContextFlush(ctx);
+                        SLSFlushWindowContentRegion(*G_CONNECTION, wid, std::ptr::null_mut());
+                        CFRelease(ctx as *mut CFType);
+                    }
+                }
+            }
+        }
     }
 
     fn draw_contents_into_layer(&self, bounds: CGRect, parent_layer: &CALayer) {
@@ -1761,11 +1762,13 @@ impl MissionControlOverlay {
     fn request_refresh(&self) {
         if !self.refresh_pending.swap(true, Ordering::AcqRel) {
             let ptr = self as *const _ as usize;
-            unsafe { queue::main().after_f(
-                Time::new_after(Time::NOW, 8000000),
-                ptr as *mut c_void,
-                refresh_coalesced_cb,
-            ) };
+            unsafe {
+                queue::main().after_f(
+                    Time::new_after(Time::NOW, 8000000),
+                    ptr as *mut c_void,
+                    refresh_coalesced_cb,
+                )
+            };
         }
     }
 
@@ -2011,11 +2014,7 @@ impl MissionControlOverlay {
         CATransaction::commit();
 
         let ctx: *mut CGContext = unsafe {
-            SLWindowContextCreate(
-                *G_CONNECTION,
-                self.cgs_window.id(),
-                core::ptr::null_mut(),
-            )
+            SLWindowContextCreate(*G_CONNECTION, self.cgs_window.id(), core::ptr::null_mut())
         };
         if !ctx.is_null() {
             unsafe {
@@ -2062,11 +2061,12 @@ impl MissionControlOverlay {
         }
 
         let ctx: Box<Ctx> = Box::new((cb, action));
-        unsafe { queue::main().after_f(Time::NOW, Box::into_raw(ctx) as *mut c_void, action_callback) };
+        unsafe {
+            queue::main().after_f(Time::NOW, Box::into_raw(ctx) as *mut c_void, action_callback)
+        };
     }
 
     fn handle_keycode(&self, keycode: u16, flags: CGEventFlags) -> bool {
-        
         match keycode {
             53 => {
                 self.emit_action(MissionControlAction::Dismiss);
@@ -2184,11 +2184,12 @@ impl MissionControlOverlay {
         };
 
         if let Some(sel) = new_sel
-            && state.selection() != Some(sel) {
-                state.set_selection(sel);
-                drop(state);
-                self.draw_and_present();
-            }
+            && state.selection() != Some(sel)
+        {
+            state.set_selection(sel);
+            drop(state);
+            self.draw_and_present();
+        }
     }
 
     fn ensure_key_tap(&self) {

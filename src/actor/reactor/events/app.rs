@@ -9,7 +9,7 @@ use crate::sys::window_server::{self as window_server, WindowServerId, WindowSer
 pub struct AppEventHandler;
 
 impl AppEventHandler {
-#[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)]
     pub fn handle_application_launched(
         reactor: &mut Reactor,
         pid: i32,
@@ -54,9 +54,10 @@ impl AppEventHandler {
 
     pub fn handle_application_terminated(reactor: &mut Reactor, pid: i32) {
         if let Some(app) = reactor.app_manager.apps.get_mut(&pid)
-            && let Err(e) = app.handle.send(crate::actor::app::Request::Terminate) {
-                warn!("Failed to send Terminate to app {}: {}", pid, e);
-            }
+            && let Err(e) = app.handle.send(crate::actor::app::Request::Terminate)
+        {
+            warn!("Failed to send Terminate to app {}: {}", pid, e);
+        }
     }
 
     pub fn handle_application_thread_terminated(reactor: &mut Reactor, pid: i32) {
@@ -84,9 +85,9 @@ impl AppEventHandler {
                 && let Err(e) = app_state
                     .handle
                     .send(crate::actor::app::Request::GetVisibleWindows { force_refresh: true })
-                {
-                    warn!("Failed to send GetVisibleWindows to app {}: {}", wid.pid, e);
-                }
+            {
+                warn!("Failed to send GetVisibleWindows to app {}: {}", wid.pid, e);
+            }
         } else if let Some(info) = reactor
             .window_server_info_manager
             .window_server_info
@@ -94,12 +95,12 @@ impl AppEventHandler {
             .cloned()
             .or_else(|| window_server::get_window(wsid))
             && let Some(app_state) = reactor.app_manager.apps.get(&info.pid)
-                && let Err(e) = app_state
-                    .handle
-                    .send(crate::actor::app::Request::GetVisibleWindows { force_refresh: true })
-                {
-                    warn!("Failed to send GetVisibleWindows to app {}: {}", info.pid, e);
-                }
+            && let Err(e) = app_state
+                .handle
+                .send(crate::actor::app::Request::GetVisibleWindows { force_refresh: true })
+        {
+            warn!("Failed to send GetVisibleWindows to app {}: {}", info.pid, e);
+        }
     }
 
     pub fn handle_application_activated(reactor: &mut Reactor, pid: i32, quiet: Quiet) {

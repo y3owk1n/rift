@@ -13,8 +13,8 @@ use parking_lot::Mutex;
 use tracing::{debug, trace};
 
 use super::skylight::{
-    cid_t, CGSEventType, SLSMainConnectionID, SLSRegisterConnectionNotifyProc,
-    SLSRequestNotificationsForWindows,
+    CGSEventType, SLSMainConnectionID, SLSRegisterConnectionNotifyProc,
+    SLSRequestNotificationsForWindows, cid_t,
 };
 use crate::actor;
 use crate::common::collections::{HashMap, HashSet};

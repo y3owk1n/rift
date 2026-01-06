@@ -99,87 +99,85 @@ impl WindowDiscoveryHandler {
 
         match skip_stale_cleanup {
             true => (Vec::new(), false),
-            false => {
-                (
-                    reactor
-                        .window_manager
-                        .windows
-                        .iter()
-                        .filter_map(|(&wid, state)| {
-                            if wid.pid != pid || known_visible_set.contains(&wid) {
-                                return None;
-                            }
+            false => (
+                reactor
+                    .window_manager
+                    .windows
+                    .iter()
+                    .filter_map(|(&wid, state)| {
+                        if wid.pid != pid || known_visible_set.contains(&wid) {
+                            return None;
+                        }
 
-                            if state.is_minimized {
-                                return None;
-                            }
+                        if state.is_minimized {
+                            return None;
+                        }
 
-                            let Some(ws_id) = state.window_server_id else {
+                        let Some(ws_id) = state.window_server_id else {
+                            trace!(
+                                ?wid,
+                                "Skipping stale cleanup for window without window server id"
+                            );
+                            return None;
+                        };
+
+                        if let Some(active_windows) = active_space_windows.as_ref()
+                            && !active_windows.contains(&ws_id)
+                        {
+                            trace!(
+                                ?wid,
+                                ws_id = ?ws_id,
+                                "Skipping stale cleanup; window is not on an active space"
+                            );
+                            return None;
+                        }
+
+                        let server_info = reactor
+                            .window_server_info_manager
+                            .window_server_info
+                            .get(&ws_id)
+                            .cloned()
+                            .or_else(|| window_server::get_window(ws_id));
+
+                        let info = match server_info {
+                            Some(info) => info,
+                            None => {
                                 trace!(
                                     ?wid,
-                                    "Skipping stale cleanup for window without window server id"
+                                    ws_id = ?ws_id,
+                                    "Skipping stale cleanup for window without server info"
                                 );
                                 return None;
-                            };
-
-                            if let Some(active_windows) = active_space_windows.as_ref()
-                                && !active_windows.contains(&ws_id) {
-                                    trace!(
-                                        ?wid,
-                                        ws_id = ?ws_id,
-                                        "Skipping stale cleanup; window is not on an active space"
-                                    );
-                                    return None;
-                                }
-
-                            let server_info = reactor
-                                .window_server_info_manager
-                                .window_server_info
-                                .get(&ws_id)
-                                .cloned()
-                                .or_else(|| window_server::get_window(ws_id));
-
-                            let info = match server_info {
-                                Some(info) => info,
-                                None => {
-                                    trace!(
-                                        ?wid,
-                                        ws_id = ?ws_id,
-                                        "Skipping stale cleanup for window without server info"
-                                    );
-                                    return None;
-                                }
-                            };
-
-                            let width = info.frame.size.width.abs();
-                            let height = info.frame.size.height.abs();
-
-                            let unsuitable = !window_server::app_window_suitable(ws_id);
-                            let invalid_layer = info.layer != 0;
-                            let too_small = width < MIN_REAL_WINDOW_DIMENSION
-                                || height < MIN_REAL_WINDOW_DIMENSION;
-                            let ordered_in = window_server::window_is_ordered_in(ws_id);
-                            let visible_in_snapshot =
-                                reactor.window_manager.visible_windows.contains(&ws_id);
-
-                            let is_on_active_space = active_space_windows
-                                .as_ref()
-                                .is_some_and(|set| set.contains(&ws_id));
-
-                            if unsuitable
-                                || invalid_layer
-                                || too_small
-                                || (is_on_active_space && !ordered_in && !visible_in_snapshot)
-                            {
-                                Some(wid)
-                            } else {
-                                None
                             }
-                        })
-                        .collect(),
-                    pending_refresh,
-                )
-            }
+                        };
+
+                        let width = info.frame.size.width.abs();
+                        let height = info.frame.size.height.abs();
+
+                        let unsuitable = !window_server::app_window_suitable(ws_id);
+                        let invalid_layer = info.layer != 0;
+                        let too_small =
+                            width < MIN_REAL_WINDOW_DIMENSION || height < MIN_REAL_WINDOW_DIMENSION;
+                        let ordered_in = window_server::window_is_ordered_in(ws_id);
+                        let visible_in_snapshot =
+                            reactor.window_manager.visible_windows.contains(&ws_id);
+
+                        let is_on_active_space =
+                            active_space_windows.as_ref().is_some_and(|set| set.contains(&ws_id));
+
+                        if unsuitable
+                            || invalid_layer
+                            || too_small
+                            || (is_on_active_space && !ordered_in && !visible_in_snapshot)
+                        {
+                            Some(wid)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect(),
+                pending_refresh,
+            ),
         }
     }
 
@@ -214,9 +212,8 @@ impl WindowDiscoveryHandler {
         reactor.app_manager.purge_expired(APP_RULE_TTL_MS);
 
         let any_recent = new.iter().any(|(_, info)| {
-            info.sys_id.is_some_and(|wsid| {
-                reactor.app_manager.is_wsid_recent(wsid, APP_RULE_TTL_MS)
-            })
+            info.sys_id
+                .is_some_and(|wsid| reactor.app_manager.is_wsid_recent(wsid, APP_RULE_TTL_MS))
         });
 
         if any_recent && app_info.is_none() && !new.is_empty() {
@@ -588,23 +585,24 @@ impl WindowDiscoveryHandler {
 
         if let Some(main_window) = reactor.main_window()
             && main_window.pid == pid
-                && let Some(space) = reactor.main_window_space() {
-                    if reactor.is_space_active(space) {
-                        reactor.send_layout_event(LayoutEvent::WindowFocused(space, main_window));
-                    }
+            && let Some(space) = reactor.main_window_space()
+        {
+            if reactor.is_space_active(space) {
+                reactor.send_layout_event(LayoutEvent::WindowFocused(space, main_window));
+            }
 
-                    if let Some(ws_id) = reactor
-                        .layout_manager
-                        .layout_engine
-                        .virtual_workspace_manager()
-                        .workspace_for_window(space, main_window)
-                    {
-                        reactor
-                            .layout_manager
-                            .layout_engine
-                            .virtual_workspace_manager_mut()
-                            .set_active_workspace(space, ws_id);
-                    }
-                }
+            if let Some(ws_id) = reactor
+                .layout_manager
+                .layout_engine
+                .virtual_workspace_manager()
+                .workspace_for_window(space, main_window)
+            {
+                reactor
+                    .layout_manager
+                    .layout_engine
+                    .virtual_workspace_manager_mut()
+                    .set_active_workspace(space, ws_id);
+            }
+        }
     }
 }

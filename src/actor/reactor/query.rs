@@ -167,10 +167,9 @@ impl Reactor {
             let mut windows: Vec<WindowData> = Vec::new();
             for wid in workspace_windows_ids.into_iter() {
                 if let Some(mut wd) = self.create_window_data(wid) {
-                    if !is_active
-                        && let Some(pred) = predicted_map.get(&wid).copied() {
-                            wd.frame = pred;
-                        }
+                    if !is_active && let Some(pred) = predicted_map.get(&wid).copied() {
+                        wd.frame = pred;
+                    }
                     windows.push(wd);
                 }
             }

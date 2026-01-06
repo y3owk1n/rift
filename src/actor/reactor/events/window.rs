@@ -54,25 +54,26 @@ impl WindowEventHandler {
 
         if is_manageable
             && let Some(space) = reactor.best_space_for_window(&frame, server_id)
-                && reactor.is_space_active(space) {
-                    if let Some(app_info) =
-                        reactor.app_manager.apps.get(&wid.pid).map(|app| app.info.clone())
-                    {
-                        if let Some(wsid) = server_id {
-                            reactor.app_manager.mark_wsids_recent(std::iter::once(wsid));
-                        }
-                        reactor.process_windows_for_app_rules(wid.pid, vec![wid], app_info);
-                    }
-                    let should_dispatch = reactor
-                        .window_manager
-                        .windows
-                        .get(&wid)
-                        .map(|window| window.is_effectively_manageable())
-                        .unwrap_or(false);
-                    if should_dispatch {
-                        reactor.send_layout_event(LayoutEvent::WindowAdded(space, wid));
-                    }
+            && reactor.is_space_active(space)
+        {
+            if let Some(app_info) =
+                reactor.app_manager.apps.get(&wid.pid).map(|app| app.info.clone())
+            {
+                if let Some(wsid) = server_id {
+                    reactor.app_manager.mark_wsids_recent(std::iter::once(wsid));
                 }
+                reactor.process_windows_for_app_rules(wid.pid, vec![wid], app_info);
+            }
+            let should_dispatch = reactor
+                .window_manager
+                .windows
+                .get(&wid)
+                .map(|window| window.is_effectively_manageable())
+                .unwrap_or(false);
+            if should_dispatch {
+                reactor.send_layout_event(LayoutEvent::WindowAdded(space, wid));
+            }
+        }
         // TODO: drag state is maybe managed by ensure_active_drag
         // if mouse_state == MouseState::Down {
         //     reactor.drag_manager.drag_state = DragState::Active { ... };
@@ -134,13 +135,14 @@ impl WindowEventHandler {
         }
 
         if let DragState::PendingSwap { session, target } = &reactor.drag_manager.drag_state
-            && (session.window == wid || *target == wid) {
-                trace!(
-                    ?wid,
-                    "Clearing pending drag swap because a participant window was destroyed"
-                );
-                reactor.drag_manager.drag_state = DragState::Inactive;
-            }
+            && (session.window == wid || *target == wid)
+        {
+            trace!(
+                ?wid,
+                "Clearing pending drag swap because a participant window was destroyed"
+            );
+            reactor.drag_manager.drag_state = DragState::Inactive;
+        }
 
         let dragged_window = reactor.drag_manager.dragged();
         let last_target = reactor.drag_manager.last_target();
@@ -209,17 +211,18 @@ impl WindowEventHandler {
 
         if is_manageable
             && let Some(space) = reactor.best_space_for_window(&frame, server_id)
-                && reactor.is_space_active(space) {
-                    let should_dispatch = reactor
-                        .window_manager
-                        .windows
-                        .get(&wid)
-                        .map(|window| window.is_effectively_manageable())
-                        .unwrap_or(false);
-                    if should_dispatch {
-                        reactor.send_layout_event(LayoutEvent::WindowAdded(space, wid));
-                    }
-                }
+            && reactor.is_space_active(space)
+        {
+            let should_dispatch = reactor
+                .window_manager
+                .windows
+                .get(&wid)
+                .map(|window| window.is_effectively_manageable())
+                .unwrap_or(false);
+            if should_dispatch {
+                reactor.send_layout_event(LayoutEvent::WindowAdded(space, wid));
+            }
+        }
     }
 
     pub fn handle_window_frame_changed(
@@ -280,14 +283,14 @@ impl WindowEventHandler {
             }
             if has_pending_request
                 && let Some(last_seen) = last_seen
-                    && last_seen != last_sent_txid
-                {
-                    // Ignore events that happened before the last time we
-                    // changed the size or position of this window. Otherwise
-                    // we would update the layout model incorrectly.
-                    debug!(?last_seen, ?last_sent_txid, "Ignoring frame change");
-                    return false;
-                }
+                && last_seen != last_sent_txid
+            {
+                // Ignore events that happened before the last time we
+                // changed the size or position of this window. Otherwise
+                // we would update the layout model incorrectly.
+                debug!(?last_seen, ?last_sent_txid, "Ignoring frame change");
+                return false;
+            }
             if requested.0 {
                 if !window.frame_monotonic.same_as(new_frame) {
                     trace!(
@@ -388,10 +391,11 @@ impl WindowEventHandler {
                         if let Some(space) = new_space
                             && let DragState::Active { session } =
                                 &mut reactor.drag_manager.drag_state
-                                && session.window == wid {
-                                    session.settled_space = Some(space);
-                                    session.layout_dirty = true;
-                                }
+                            && session.window == wid
+                        {
+                            session.settled_space = Some(space);
+                            session.layout_dirty = true;
+                        }
                     } else if let Some(space) = new_space {
                         if reactor.is_space_active(space) {
                             if let Some(active_ws) =
@@ -430,15 +434,16 @@ impl WindowEventHandler {
                     }
                 } else if old_frame.size != new_frame.size {
                     if let Some(space) = old_space
-                        && reactor.is_space_active(space) {
-                            reactor.send_layout_event(LayoutEvent::WindowResized {
-                                wid,
-                                old_frame,
-                                new_frame,
-                                screens,
-                            });
-                            return true;
-                        }
+                        && reactor.is_space_active(space)
+                    {
+                        reactor.send_layout_event(LayoutEvent::WindowResized {
+                            wid,
+                            old_frame,
+                            new_frame,
+                            screens,
+                        });
+                        return true;
+                    }
                     return false;
                 }
             }
@@ -475,9 +480,10 @@ impl WindowEventHandler {
         });
 
         if let Some(space) = space
-            && reactor.is_space_active(space) {
-                reactor.send_layout_event(LayoutEvent::WindowFocused(space, wid));
-            }
+            && reactor.is_space_active(space)
+        {
+            reactor.send_layout_event(LayoutEvent::WindowFocused(space, wid));
+        }
     }
 }
 

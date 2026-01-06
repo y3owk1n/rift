@@ -188,18 +188,20 @@ impl CommandEventHandler {
             .update_config(reactor.config_manager.config.settings.window_snapping);
 
         if let Some(tx) = &reactor.communication_manager.stack_line_tx
-            && let Err(e) = tx.try_send(StackLineEvent::ConfigUpdated(
-                Box::new(reactor.config_manager.config.clone()),
-            )) {
-                warn!("Failed to send config update to stack line: {}", e);
-            }
+            && let Err(e) = tx.try_send(StackLineEvent::ConfigUpdated(Box::new(
+                reactor.config_manager.config.clone(),
+            )))
+        {
+            warn!("Failed to send config update to stack line: {}", e);
+        }
 
         if let Some(tx) = &reactor.menu_manager.menu_tx
-            && let Err(e) = tx.try_send(menu_bar::Event::ConfigUpdated(
-                Box::new(reactor.config_manager.config.clone()),
-            )) {
-                warn!("Failed to send config update to menu bar: {}", e);
-            }
+            && let Err(e) = tx.try_send(menu_bar::Event::ConfigUpdated(Box::new(
+                reactor.config_manager.config.clone(),
+            )))
+        {
+            warn!("Failed to send config update to menu bar: {}", e);
+        }
 
         let _ = reactor.update_layout(false, true).unwrap_or_else(|e| {
             warn!("Layout update failed: {}", e);
@@ -207,9 +209,12 @@ impl CommandEventHandler {
         });
 
         if old_keys != reactor.config_manager.config.keys
-            && let Some(wm) = &reactor.communication_manager.wm_sender {
-                wm.send(WmEvent::ConfigUpdated(Box::new(reactor.config_manager.config.clone())));
-            }
+            && let Some(wm) = &reactor.communication_manager.wm_sender
+        {
+            wm.send(WmEvent::ConfigUpdated(Box::new(
+                reactor.config_manager.config.clone(),
+            )));
+        }
     }
 
     pub fn handle_command_reactor_debug(reactor: &mut Reactor) {
@@ -272,9 +277,10 @@ impl CommandEventHandler {
                 warn!("Failed to send raise request: {}", e);
             }
         } else if let Some(wsid) = window_server_id
-            && let Err(e) = window_server::make_key_window(window_id.pid, wsid) {
-                warn!("Failed to make key window: {:?}", e);
-            }
+            && let Err(e) = window_server::make_key_window(window_id.pid, wsid)
+        {
+            warn!("Failed to make key window: {:?}", e);
+        }
     }
 
     pub fn handle_command_reactor_show_mission_control_all(reactor: &mut Reactor) {

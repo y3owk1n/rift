@@ -113,7 +113,12 @@ impl WindowNotify {
         };
 
         for event in self.initial_events.drain(..) {
-            match Self::subscribe(event, self.events_tx.clone(), self.tx_store.clone(), self.mc_active.clone()) {
+            match Self::subscribe(
+                event,
+                self.events_tx.clone(),
+                self.tx_store.clone(),
+                self.mc_active.clone(),
+            ) {
                 Ok(()) => {
                     self.subscribed.insert(event);
                     debug!("initial subscription succeeded for event {}", event);
@@ -143,7 +148,12 @@ impl WindowNotify {
                     debug!("already subscribed to event {}", event);
                     return;
                 }
-                match Self::subscribe(event, self.events_tx.clone(), self.tx_store.clone(), self.mc_active.clone()) {
+                match Self::subscribe(
+                    event,
+                    self.events_tx.clone(),
+                    self.tx_store.clone(),
+                    self.mc_active.clone(),
+                ) {
                     Ok(()) => {
                         self.subscribed.insert(event);
                         debug!("subscribed to event {}", event);

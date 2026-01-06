@@ -42,32 +42,33 @@ impl BspLayoutSystem {
 
         while let Some(parent) = current.parent(&self.tree.map) {
             if let Some(NodeKind::Split { orientation, .. }) = self.kind.get(parent)
-                && *orientation == direction.orientation() {
-                    let children: Vec<_> = parent.children(&self.tree.map).collect();
-                    if children.len() == 2 {
-                        let is_first = children[0] == current;
-                        let target_child = match direction {
-                            Direction::Left | Direction::Up => {
-                                if !is_first {
-                                    Some(children[0])
-                                } else {
-                                    None
-                                }
+                && *orientation == direction.orientation()
+            {
+                let children: Vec<_> = parent.children(&self.tree.map).collect();
+                if children.len() == 2 {
+                    let is_first = children[0] == current;
+                    let target_child = match direction {
+                        Direction::Left | Direction::Up => {
+                            if !is_first {
+                                Some(children[0])
+                            } else {
+                                None
                             }
-                            Direction::Right | Direction::Down => {
-                                if is_first {
-                                    Some(children[1])
-                                } else {
-                                    None
-                                }
-                            }
-                        };
-
-                        if let Some(target) = target_child {
-                            return Some(self.find_closest_leaf_in_direction(target, direction));
                         }
+                        Direction::Right | Direction::Down => {
+                            if is_first {
+                                Some(children[1])
+                            } else {
+                                None
+                            }
+                        }
+                    };
+
+                    if let Some(target) = target_child {
+                        return Some(self.find_closest_leaf_in_direction(target, direction));
                     }
                 }
+            }
             current = parent;
         }
 
@@ -368,9 +369,10 @@ impl BspLayoutSystem {
     fn remove_window_internal(&mut self, layout: crate::layout_engine::LayoutId, wid: WindowId) {
         if let Some(&node_id) = self.window_to_node.get(&wid) {
             if let Some(state) = self.layouts.get(layout).copied()
-                && !self.belongs_to_layout(state, node_id) {
-                    return;
-                }
+                && !self.belongs_to_layout(state, node_id)
+            {
+                return;
+            }
             if let Some(NodeKind::Leaf { window, .. }) = self.kind.get_mut(node_id) {
                 *window = None;
             }
@@ -852,10 +854,11 @@ impl LayoutSystem for BspLayoutSystem {
     fn visible_windows_under_selection(&self, layout: LayoutId) -> Vec<WindowId> {
         let mut out = Vec::new();
         if let Some(sel) = self.selection_of_layout(layout)
-            && self.kind.get(sel).is_some() {
-                let leaf = self.descend_to_leaf(sel);
-                self.collect_windows_under(leaf, &mut out);
-            }
+            && self.kind.get(sel).is_some()
+        {
+            let leaf = self.descend_to_leaf(sel);
+            self.collect_windows_under(leaf, &mut out);
+        }
 
         out
     }
@@ -967,9 +970,10 @@ impl LayoutSystem for BspLayoutSystem {
                             fullscreen_within_gaps,
                             ..
                         }) = self.kind.get(node)
-                            && (*fullscreen || *fullscreen_within_gaps) {
-                                continue; // keep fullscreen node in tree
-                            }
+                        && (*fullscreen || *fullscreen_within_gaps)
+                    {
+                        continue; // keep fullscreen node in tree
+                    }
                     self.remove_window_internal(layout, w);
                 }
             }
@@ -993,9 +997,10 @@ impl LayoutSystem for BspLayoutSystem {
 
     fn contains_window(&self, layout: LayoutId, wid: WindowId) -> bool {
         if let Some(&node) = self.window_to_node.get(&wid)
-            && let Some(state) = self.layouts.get(layout).copied() {
-                return self.belongs_to_layout(state, node);
-            }
+            && let Some(state) = self.layouts.get(layout).copied()
+        {
+            return self.belongs_to_layout(state, node);
+        }
         false
     }
 
@@ -1026,33 +1031,34 @@ impl LayoutSystem for BspLayoutSystem {
         gaps: &crate::common::config::GapSettings,
     ) {
         if let Some(&node) = self.window_to_node.get(&wid)
-            && let Some(state) = self.layouts.get(layout).copied() {
-                if !self.belongs_to_layout(state, node) {
-                    return;
-                }
-                if let Some(NodeKind::Leaf {
-                    window: _,
-                    fullscreen,
-                    fullscreen_within_gaps,
-                    ..
-                }) = self.kind.get_mut(node)
-                {
-                    if new_frame == screen {
-                        *fullscreen = true;
-                        *fullscreen_within_gaps = false;
-                    } else if old_frame == screen {
+            && let Some(state) = self.layouts.get(layout).copied()
+        {
+            if !self.belongs_to_layout(state, node) {
+                return;
+            }
+            if let Some(NodeKind::Leaf {
+                window: _,
+                fullscreen,
+                fullscreen_within_gaps,
+                ..
+            }) = self.kind.get_mut(node)
+            {
+                if new_frame == screen {
+                    *fullscreen = true;
+                    *fullscreen_within_gaps = false;
+                } else if old_frame == screen {
+                    *fullscreen = false;
+                } else {
+                    let tiling = Self::apply_outer_gaps(screen, gaps);
+                    if new_frame == tiling {
+                        *fullscreen_within_gaps = true;
                         *fullscreen = false;
-                    } else {
-                        let tiling = Self::apply_outer_gaps(screen, gaps);
-                        if new_frame == tiling {
-                            *fullscreen_within_gaps = true;
-                            *fullscreen = false;
-                        } else if old_frame == tiling {
-                            *fullscreen_within_gaps = false;
-                        }
+                    } else if old_frame == tiling {
+                        *fullscreen_within_gaps = false;
                     }
                 }
             }
+        }
     }
 
     fn move_selection(&mut self, layout: LayoutId, direction: Direction) -> bool {

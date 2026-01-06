@@ -39,9 +39,10 @@ impl TraditionalLayoutSystem {
         }
 
         if let Some(selected) = self.tree.data.selection.local_selection(self.map(), node)
-            && let Some(target) = self.find_best_focus_target(selected) {
-                return Some(target);
-            }
+            && let Some(target) = self.find_best_focus_target(selected)
+        {
+            return Some(target);
+        }
 
         for &child in &children {
             if let Some(target) = self.find_best_focus_target(child) {
@@ -89,17 +90,18 @@ impl TraditionalLayoutSystem {
         let parent2 = node2.parent(self.map());
 
         if let (Some(p1), Some(p2)) = (parent1, parent2)
-            && p1 == p2 {
-                let parent_layout = self.layout(p1);
-                let sibling_count = p1.children(self.map()).count();
+            && p1 == p2
+        {
+            let parent_layout = self.layout(p1);
+            let sibling_count = p1.children(self.map()).count();
 
-                if parent_layout.orientation() == direction.orientation()
-                    && !parent_layout.is_group()
-                    && sibling_count == 2
-                {
-                    return p1;
-                }
+            if parent_layout.orientation() == direction.orientation()
+                && !parent_layout.is_group()
+                && sibling_count == 2
+            {
+                return p1;
             }
+        }
 
         self.find_or_create_common_parent_internal(layout, node1, node2)
     }
@@ -133,9 +135,10 @@ impl TraditionalLayoutSystem {
                     && let Some(neighbor) = match direction {
                         Direction::Right | Direction::Down => parent.next_sibling(self.map()),
                         Direction::Left | Direction::Up => parent.prev_sibling(self.map()),
-                    } {
-                        return Some(neighbor);
                     }
+                {
+                    return Some(neighbor);
+                }
                 let is_edge = match direction {
                     Direction::Right | Direction::Down => from.next_sibling(self.map()).is_none(),
                     Direction::Left | Direction::Up => from.prev_sibling(self.map()).is_none(),
@@ -471,10 +474,9 @@ impl LayoutSystem for TraditionalLayoutSystem {
                 {
                     continue;
                 }
-                if self.tree.data.selection.select_locally(map, node)
-                    && parent_layout.is_group() {
-                        highest_revealed = node;
-                    }
+                if self.tree.data.selection.select_locally(map, node) && parent_layout.is_group() {
+                    highest_revealed = node;
+                }
             }
             let raise_windows = self.visible_windows_under_internal(highest_revealed);
             (Some(focus_window), raise_windows)
@@ -492,7 +494,6 @@ impl LayoutSystem for TraditionalLayoutSystem {
         let node = if selection.parent(self.map()).is_none() {
             self.add_window_under(layout, selection, wid)
         } else {
-            
             self.smart_window_insertion(layout, selection, wid)
         };
         self.select(node);
@@ -770,9 +771,10 @@ impl LayoutSystem for TraditionalLayoutSystem {
                 self.set_layout(container, nl);
 
                 if nl.is_stacked()
-                    && let Some(first_child) = container.first_child(self.map()) {
-                        self.select(first_child);
-                    }
+                    && let Some(first_child) = container.first_child(self.map())
+                {
+                    self.select(first_child);
+                }
 
                 return self.visible_windows_under_internal(container);
             }
@@ -1291,7 +1293,8 @@ impl TraditionalLayoutSystem {
             return Some(sibling);
         }
         let node = from.ancestors(map).skip(1).find_map(|ancestor| {
-            self.move_over(ancestor, direction).map(|target| self.descend_into_target(target, direction, map))
+            self.move_over(ancestor, direction)
+                .map(|target| self.descend_into_target(target, direction, map))
         });
         node.flatten()
     }
@@ -1623,7 +1626,8 @@ impl TraditionalLayoutSystem {
             old_parent
         } else {
             None
-        }.unwrap_or_else(|| {
+        }
+        .unwrap_or_else(|| {
             let new_parent = if let Some(old_parent) = old_parent {
                 let is_selection =
                     self.tree.data.selection.local_selection(self.map(), old_parent) == Some(node);
@@ -1669,14 +1673,15 @@ impl TraditionalLayoutSystem {
         let parent1 = node1.parent(self.map());
         let parent2 = node2.parent(self.map());
         if let (Some(p1), Some(p2)) = (parent1, parent2)
-            && p1 == p2 {
-                let new_container = self.tree.mk_node().insert_before(node1);
-                self.tree.data.layout.assume_size_of(new_container, node1, &self.tree.map);
-                self.tree.data.layout.assume_size_of(new_container, node2, &self.tree.map);
-                node1.detach(&mut self.tree).push_back(new_container);
-                node2.detach(&mut self.tree).push_back(new_container);
-                return new_container;
-            }
+            && p1 == p2
+        {
+            let new_container = self.tree.mk_node().insert_before(node1);
+            self.tree.data.layout.assume_size_of(new_container, node1, &self.tree.map);
+            self.tree.data.layout.assume_size_of(new_container, node2, &self.tree.map);
+            node1.detach(&mut self.tree).push_back(new_container);
+            node2.detach(&mut self.tree).push_back(new_container);
+            return new_container;
+        }
         let ancestors1: Vec<_> = node1.ancestors(self.map()).collect();
         let ancestors2: Vec<_> = node2.ancestors(self.map()).collect();
         for &ancestor in &ancestors1 {
@@ -1828,12 +1833,13 @@ impl Window {
             TreeEvent::RemovingFromParent(_) => (),
             TreeEvent::RemovedFromForest(node) => {
                 if let Some(wid) = self.windows.remove(node)
-                    && let Some(window_nodes) = self.window_nodes.get_mut(&wid) {
-                        window_nodes.0.retain(|info| info.node != node);
-                        if window_nodes.0.is_empty() {
-                            self.window_nodes.remove(&wid);
-                        }
+                    && let Some(window_nodes) = self.window_nodes.get_mut(&wid)
+                {
+                    window_nodes.0.retain(|info| info.node != node);
+                    if window_nodes.0.is_empty() {
+                        self.window_nodes.remove(&wid);
                     }
+                }
             }
         }
     }
@@ -2063,9 +2069,10 @@ impl Layout {
 
     fn is_focused_in_subtree(&self, map: &NodeMap, window: &Window, node: NodeId) -> bool {
         if window.at(node).is_some()
-            && let Some(parent) = node.parent(map) {
-                return parent.first_child(map) == Some(node);
-            }
+            && let Some(parent) = node.parent(map)
+        {
+            return parent.first_child(map) == Some(node);
+        }
         for child in node.children(map) {
             if self.is_focused_in_subtree(map, window, child) {
                 return true;

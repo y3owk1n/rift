@@ -64,10 +64,12 @@ impl MainWindowTracker {
             }
             _ => return None,
         };
-        if Some(event_pid) == self.global_frontmost && quiet_edge == Quiet::No
-            && let Some(wid) = self.main_window() {
-                return Some(wid);
-            }
+        if Some(event_pid) == self.global_frontmost
+            && quiet_edge == Quiet::No
+            && let Some(wid) = self.main_window()
+        {
+            return Some(wid);
+        }
         None
     }
 

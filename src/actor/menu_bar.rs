@@ -154,7 +154,7 @@ impl Menu {
             let mut change: libc::kevent = std::mem::zeroed();
             change.ident = 1 as libc::uintptr_t;
             change.filter = libc::EVFILT_TIMER;
-            change.flags = libc::EV_ADD | libc::EV_ENABLE ;
+            change.flags = libc::EV_ADD | libc::EV_ENABLE;
             change.fflags = 0;
             change.data = period_ms as libc::intptr_t;
             change.udata = std::ptr::null_mut();

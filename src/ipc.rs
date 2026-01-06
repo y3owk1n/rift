@@ -314,19 +314,17 @@ impl MachHandler {
                 }
             }
 
-            RiftRequest::GetApplications => {
-                match self.perform_query(Event::QueryApplications) {
-                    Ok(applications) => RiftResponse::Success {
-                        data: serde_json::to_value(applications).unwrap(),
-                    },
-                    Err(e) => {
-                        error!("{}", e);
-                        RiftResponse::Error {
-                            error: serde_json::json!({ "message": "Failed to get applications response", "details": format!("{}", e) }),
-                        }
+            RiftRequest::GetApplications => match self.perform_query(Event::QueryApplications) {
+                Ok(applications) => RiftResponse::Success {
+                    data: serde_json::to_value(applications).unwrap(),
+                },
+                Err(e) => {
+                    error!("{}", e);
+                    RiftResponse::Error {
+                        error: serde_json::json!({ "message": "Failed to get applications response", "details": format!("{}", e) }),
                     }
                 }
-            }
+            },
 
             RiftRequest::GetMetrics => match self.perform_query(Event::QueryMetrics) {
                 Ok(metrics) => RiftResponse::Success { data: metrics },

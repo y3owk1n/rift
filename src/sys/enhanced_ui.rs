@@ -18,17 +18,15 @@ where
 {
     let original_state = get_enhanced_user_interface(element);
 
-    if original_state
-        && let Err(error) = set_enhanced_user_interface(element, false) {
-            warn!("Failed to disable Enhanced User Interface: {:?}", error);
-        }
+    if original_state && let Err(error) = set_enhanced_user_interface(element, false) {
+        warn!("Failed to disable Enhanced User Interface: {:?}", error);
+    }
 
     let result = f();
 
-    if original_state
-        && let Err(error) = set_enhanced_user_interface(element, true) {
-            warn!("Failed to restore Enhanced User Interface: {:?}", error);
-        }
+    if original_state && let Err(error) = set_enhanced_user_interface(element, true) {
+        warn!("Failed to restore Enhanced User Interface: {:?}", error);
+    }
 
     result
 }

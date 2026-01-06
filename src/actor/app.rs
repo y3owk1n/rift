@@ -191,7 +191,6 @@ pub struct AppThreadHandle {
 
 impl AppThreadHandle {
     pub(crate) fn new_for_test(requests_tx: actor::Sender<Request>) -> Self {
-        
         AppThreadHandle { requests_tx }
     }
 
@@ -479,9 +478,10 @@ impl State {
             }
             Request::CloseWindow(wid) => {
                 if let Some(window) = self.windows.get(wid)
-                    && let Err(err) = window.elem.close() {
-                        warn!(?wid, ?err, "Failed to close window");
-                    }
+                    && let Err(err) = window.elem.close()
+                {
+                    warn!(?wid, ?err, "Failed to close window");
+                }
             }
             Request::GetVisibleWindows { force_refresh } => {
                 let window_elems = match self.app.windows() {
@@ -928,9 +928,7 @@ impl State {
             }
             trace!("Activation complete");
         } else {
-            trace!(
-                "Not awaiting activation event. is_standard={is_standard:?}"
-            )
+            trace!("Not awaiting activation event. is_standard={is_standard:?}")
         }
 
         let mut this = this_ref.borrow_mut();

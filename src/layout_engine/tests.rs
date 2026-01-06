@@ -264,7 +264,6 @@ mod bsp_layout_edge_cases {
             let _ = system.move_focus(layout, Direction::Right);
             let _ = system.move_focus(layout, Direction::Up);
             let _ = system.move_focus(layout, Direction::Down);
-
         }
 
         #[test]
@@ -333,7 +332,6 @@ mod bsp_layout_edge_cases {
 
             system.resize_selection_by(layout, 0.1);
             system.resize_selection_by(layout, -0.05);
-
         }
 
         #[test]
@@ -345,7 +343,6 @@ mod bsp_layout_edge_cases {
 
             system.resize_selection_by(layout, 0.1);
             system.resize_selection_by(layout, -0.1);
-
         }
 
         #[test]
@@ -362,7 +359,6 @@ mod bsp_layout_edge_cases {
             for _ in 0..100 {
                 system.resize_selection_by(layout, -0.1);
             }
-
         }
     }
 
@@ -430,7 +426,6 @@ mod bsp_layout_edge_cases {
 
             system.toggle_tile_orientation(layout);
             system.toggle_tile_orientation(layout);
-
         }
 
         #[test]
@@ -852,7 +847,6 @@ mod traditional_layout_edge_cases {
             let _ = system.move_focus(layout, Direction::Right);
             let _ = system.move_focus(layout, Direction::Up);
             let _ = system.move_focus(layout, Direction::Down);
-
         }
 
         #[test]
@@ -956,7 +950,6 @@ mod traditional_layout_edge_cases {
 
             system.toggle_tile_orientation(layout);
             system.toggle_tile_orientation(layout);
-
         }
     }
 
@@ -973,7 +966,6 @@ mod traditional_layout_edge_cases {
 
             system.resize_selection_by(layout, 0.1);
             system.resize_selection_by(layout, -0.05);
-
         }
 
         #[test]
@@ -990,7 +982,6 @@ mod traditional_layout_edge_cases {
             for _ in 0..100 {
                 system.resize_selection_by(layout, -0.1);
             }
-
         }
     }
 
@@ -1111,7 +1102,6 @@ mod traditional_layout_edge_cases {
             }
 
             system.rebalance(layout);
-
         }
     }
 
@@ -1131,7 +1121,6 @@ mod traditional_layout_edge_cases {
             let _ = system.move_selection(layout, Direction::Right);
             let _ = system.move_selection(layout, Direction::Up);
             let _ = system.move_selection(layout, Direction::Down);
-
         }
 
         #[test]
@@ -1190,7 +1179,6 @@ mod traditional_layout_edge_cases {
 
             system.add_window_after_selection(layout, w(1, 1));
             system.split_selection(layout, LayoutKind::Horizontal);
-
         }
 
         #[test]
@@ -1200,7 +1188,6 @@ mod traditional_layout_edge_cases {
 
             system.add_window_after_selection(layout, w(1, 1));
             system.split_selection(layout, LayoutKind::Vertical);
-
         }
     }
 
@@ -1274,7 +1261,6 @@ mod traditional_layout_edge_cases {
             }
 
             system.unjoin_selection(layout);
-
         }
     }
 
@@ -1291,7 +1277,6 @@ mod traditional_layout_edge_cases {
             }
 
             system.join_selection_with_direction(layout, Direction::Right);
-
         }
     }
 }
@@ -1354,7 +1339,6 @@ mod layout_system_common {
             }
 
             bsp.remove_layout(layout);
-
         }
     }
 
