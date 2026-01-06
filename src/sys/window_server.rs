@@ -268,7 +268,8 @@ pub fn window_is_ordered_in(id: WindowServerId) -> bool {
 
 fn get_visible_windows_raw<T: Type>() -> CFRetained<CFArray<T>> {
     unsafe {
-        // TODO: cgwindowlistcopywindowinfo does not appear to order windows properly
+        // CGWindowListCopyWindowInfo is used for getting all visible windows at once.
+        // Note: it doesn't properly order windows, so we use AX API for accurate tracking.
         // SAFETY: this will almost always return (pre objc2 was not a result and just a cfarray)
         if let Some(windows) = CGWindowListCopyWindowInfo(
             CGWindowListOption::OptionOnScreenOnly | CGWindowListOption::ExcludeDesktopElements,

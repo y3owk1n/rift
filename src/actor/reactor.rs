@@ -1040,8 +1040,9 @@ impl Reactor {
     }
 
     fn check_for_new_windows(&mut self) {
-        // TODO: Do this correctly/more optimally using CGWindowListCopyWindowInfo
-        // (see notes for on_windows_discovered below).
+        // Using per-app requests (GetVisibleWindows) rather than CGWindowListCopyWindowInfo
+        // because the CG API doesn't properly order windows, making it unreliable for
+        // detecting new windows vs existing ones. The AX API provides accurate results.
         for app in self.app_manager.apps.values_mut() {
             // Errors mean the app terminated (and a termination event
             // is coming); ignore.
