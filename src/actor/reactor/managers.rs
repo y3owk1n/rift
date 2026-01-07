@@ -390,10 +390,18 @@ pub struct PendingSpaceChangeManager {
     pub topology_relayout_pending: bool,
 }
 
+/// Minimum time between border updates to coalesce rapid events (in milliseconds)
+/// we use 16ms to align with 60fps
+const BORDER_UPDATE_COALESCE_MS: u64 = 16;
+
 /// Manages the focused window border overlay
 pub struct BorderManager {
     pub border_window: Option<std::cell::RefCell<crate::ui::border::FocusBorderWindow>>,
     pub last_focused_window: Option<WindowId>,
+    /// Last time we performed a border update (for event coalescing)
+    pub last_update_time: Option<Instant>,
+    /// Pending frame to render (for coalescing)
+    pub pending_frame: Option<CGRect>,
 }
 
 impl BorderManager {
@@ -401,6 +409,7 @@ impl BorderManager {
         &mut self,
         window_id: Option<WindowId>,
         window_frame: Option<CGRect>,
+        window_server_id: Option<crate::sys::window_server::WindowServerId>,
         config: &crate::common::config::WindowBorderSettings,
         animation_duration: Duration,
         animate: bool,
@@ -410,6 +419,7 @@ impl BorderManager {
                 border_window.borrow().hide();
             }
             self.last_focused_window = None;
+            self.pending_frame = None;
             return;
         }
 
@@ -420,24 +430,46 @@ impl BorderManager {
                         border_window.borrow().hide();
                     }
                     self.last_focused_window = None;
+                    self.pending_frame = None;
                     return;
                 }
 
                 let border_config = crate::ui::border::BorderConfig::from(config);
 
+                // Check if same window is being updated
+                let is_same_window = self.last_focused_window == Some(wid);
+
+                // Event coalescing: if same window and updated recently, skip this update
+                // This reduces CPU usage during rapid window movements
+                if is_same_window && let Some(last_time) = self.last_update_time {
+                    let elapsed_ms = last_time.elapsed().as_millis() as u64;
+                    if elapsed_ms < BORDER_UPDATE_COALESCE_MS {
+                        // Store pending frame for later
+                        self.pending_frame = Some(frame);
+                        return;
+                    }
+                }
+
                 let should_update = match (self.last_focused_window, &self.border_window) {
                     (Some(last_wid), Some(bw)) if last_wid == wid => {
                         let current_frame = bw.borrow().current_frame();
-                        current_frame.origin.x != frame.origin.x
-                            || current_frame.origin.y != frame.origin.y
-                            || current_frame.size.width != frame.size.width
-                            || current_frame.size.height != frame.size.height
+                        // Use tolerance comparison to reduce unnecessary updates
+                        const EPSILON: f64 = 0.5;
+                        (current_frame.origin.x - frame.origin.x).abs() > EPSILON
+                            || (current_frame.origin.y - frame.origin.y).abs() > EPSILON
+                            || (current_frame.size.width - frame.size.width).abs() > EPSILON
+                            || (current_frame.size.height - frame.size.height).abs() > EPSILON
                     }
                     _ => true,
                 };
 
                 if should_update {
                     if let Some(ref border_window) = self.border_window {
+                        // Set target window's corner radius for visual matching
+                        let corner_radius = window_server_id
+                            .and_then(crate::sys::window_server::window_corner_radius);
+                        border_window.borrow().set_target_corner_radius(corner_radius);
+
                         if animate && animation_duration.as_secs_f64() > 0.0 {
                             border_window.borrow().show_with_animation(frame, animation_duration);
                         } else {
@@ -446,6 +478,8 @@ impl BorderManager {
                         border_window.borrow().set_config(border_config);
                     }
                     self.last_focused_window = Some(wid);
+                    self.last_update_time = Some(Instant::now());
+                    self.pending_frame = None;
                 }
             }
             (None, _) => {
@@ -453,6 +487,7 @@ impl BorderManager {
                     border_window.borrow().hide();
                 }
                 self.last_focused_window = None;
+                self.pending_frame = None;
             }
             _ => {}
         }
@@ -478,9 +513,11 @@ impl BorderManager {
         }
     }
 
-    pub fn tick_animation(&self) {
+    pub fn tick_animation(&self) -> bool {
         if let Some(ref border_window) = self.border_window {
-            border_window.borrow().tick_animation();
+            border_window.borrow().tick_animation()
+        } else {
+            false
         }
     }
 }

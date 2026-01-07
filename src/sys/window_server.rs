@@ -164,6 +164,31 @@ impl WindowQuery {
     pub fn attributes(&self) -> u64 {
         unsafe { SLSWindowIteratorGetAttributes(self.iter) }
     }
+
+    /// Get the window's corner radius (first corner, usually all corners are the same)
+    /// Returns None if corner radii are not available (macOS 26.0+ only)
+    #[inline]
+    #[allow(dead_code)]
+    pub fn corner_radius(&self) -> Option<f64> {
+        use std::ptr::NonNull;
+        let radii_ref = unsafe {
+            let s = c"SLSWindowIteratorGetCornerRadii";
+            let p = nix::libc::dlsym(nix::libc::RTLD_DEFAULT, s.as_ptr());
+            if p.is_null() {
+                return None;
+            }
+            let f: unsafe extern "C" fn(*mut CFType) -> *mut CFArray<CFNumber> =
+                std::mem::transmute(p);
+            f(self.iter)
+        };
+        let radii_nn = NonNull::new(radii_ref)?;
+        let radii: CFRetained<CFArray<CFNumber>> = unsafe { CFRetained::from_raw(radii_nn) };
+        if radii.is_empty() {
+            return None;
+        }
+        // Get first corner radius (usually all corners are the same)
+        radii.get(0)?.as_i64().map(|v| v as f64)
+    }
 }
 
 impl Drop for WindowQuery {
@@ -360,6 +385,16 @@ pub fn get_window(id: WindowServerId) -> Option<WindowServerInfo> {
 
 pub fn window_exists(id: WindowServerId) -> bool {
     get_window(id).is_some()
+}
+
+/// Get the corner radius of a window
+/// Returns None if corner radii are unavailable (macOS 26.0+ feature) or window doesn't exist
+/// Falls back to default macOS window corner radius (9.0) if API is unavailable
+pub fn window_corner_radius(id: WindowServerId) -> Option<f64> {
+    let cf = cf_array_from_ids(&[id]);
+    let cf_ptr = CFRetained::as_ptr(&cf).as_ptr();
+    let query = unsafe { WindowQuery::new_from_cfarray(cf_ptr, 0x1)? };
+    query.advance().and_then(|q| q.corner_radius())
 }
 
 fn get_num(dict: &CFDictionary<CFString, CFType>, key: &'static CFString) -> Option<i64> {

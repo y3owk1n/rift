@@ -166,7 +166,10 @@ width = 2.0
 # Border color: hex string (#33ccff) or RGBA object { r = 0.2, g = 0.8, b = 1.0, a = 1.0 }
 # RGBA values can be 0-1 or 0-255 (e.g., { r = 51, g = 204, b = 255 })
 color = "#33ccff"
-# Corner roundness in pixels (0 = square corners)
+# Corner roundness in pixels.
+# This value is used as a fallback if Rift cannot automatically detect
+# the target window's corner radius (e.g. on older macOS versions).
+# If detection succeeds, the window's actual radius is used.
 roundness = 8.0
 
 # Trackpad gestures

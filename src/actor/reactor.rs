@@ -52,6 +52,7 @@ use crate::layout_engine::{self as layout, Direction, LayoutCommand, LayoutEngin
 use crate::model::VirtualWorkspaceId;
 use crate::model::tx_store::WindowTxStore;
 use crate::model::virtual_workspace::AppRuleResult;
+use crate::sys::display_link::DisplayLink;
 use crate::sys::event::MouseState;
 use crate::sys::executor::Executor;
 use crate::sys::geometry::{CGRectDef, CGRectExt};
@@ -198,6 +199,10 @@ pub enum Event {
     RaiseTimeout {
         sequence_id: u64,
     },
+
+    /// VSYNC animation tick event
+    #[serde(skip)]
+    TickAnimation,
 
     Command(Command),
 
@@ -384,6 +389,7 @@ pub struct Reactor {
     last_activation_time: Option<std::time::Instant>,
     active_spaces: HashSet<SpaceId>,
     mc_active: std::sync::Arc<AtomicBool>,
+    display_link: Option<DisplayLink>,
 }
 
 #[derive(Debug)]
@@ -609,11 +615,14 @@ impl Reactor {
                     None
                 },
                 last_focused_window: None,
+                last_update_time: None,
+                pending_frame: None,
             },
             layout_update_in_flight: false,
             last_activation_time: None,
             active_spaces: HashSet::default(),
             mc_active,
+            display_link: None,
         }
     }
 
@@ -690,6 +699,7 @@ impl Reactor {
     }
 
     pub async fn run(mut self, events: Receiver, events_tx: Sender) {
+        self.communication_manager.events_tx = Some(events_tx.clone());
         let (raise_manager_tx, raise_manager_rx) = actor::channel();
         self.communication_manager.raise_manager_tx = raise_manager_tx.clone();
 
@@ -703,9 +713,32 @@ impl Reactor {
     async fn run_reactor_loop(mut self, mut events: Receiver) {
         let mut pending_events: Vec<(Span, Event)> = Vec::with_capacity(64);
         let mut coalesce_timer = Timer::repeating(Duration::ZERO, Duration::from_millis(5));
-        let animation_fps = self.config_manager.config.settings.animation_fps;
-        let animation_interval = Duration::from_secs_f64(1.0 / animation_fps);
-        let mut animation_timer = Timer::repeating(Duration::ZERO, animation_interval);
+
+        // Attempt to setup DisplayLink for vsync-synchronized animations
+        let events_tx_opt = self.communication_manager.events_tx.clone();
+
+        if let Some(events_tx) = events_tx_opt {
+            match DisplayLink::new(move || {
+                events_tx.send(Event::TickAnimation);
+                true
+            }) {
+                Ok(link) => {
+                    // Start on demand
+                    self.display_link = Some(link);
+                }
+                Err(e) => {
+                    warn!("Failed to create DisplayLink: {}", e);
+                }
+            }
+        }
+
+        let mut animation_timer = if self.display_link.is_some() {
+            Timer::manual()
+        } else {
+            let animation_fps = self.config_manager.config.settings.animation_fps;
+            let animation_interval = Duration::from_secs_f64(1.0 / animation_fps);
+            Timer::repeating(Duration::ZERO, animation_interval)
+        };
 
         loop {
             tokio::select! {
@@ -713,7 +746,14 @@ impl Reactor {
                 message = events.recv() => {
                     match message {
                         Some((span, event)) => {
-                            pending_events.push((span, event));
+                            if matches!(event, Event::TickAnimation) {
+                                // Handle animation tick immediately for lowest latency
+                                span.in_scope(|| {
+                                    self.tick_border_animation();
+                                });
+                            } else {
+                                pending_events.push((span, event));
+                            }
                         }
                         None => {
                             break;
@@ -2561,6 +2601,9 @@ impl Reactor {
         let frame = focused_window
             .and_then(|wid| self.window_manager.windows.get(&wid).map(|w| w.frame_monotonic));
 
+        let window_server_id = focused_window
+            .and_then(|wid| self.window_manager.windows.get(&wid).and_then(|w| w.window_server_id));
+
         let animation_duration =
             Duration::from_secs_f64(self.config_manager.config.settings.animation_duration);
         let animate = self.config_manager.config.settings.animate;
@@ -2568,14 +2611,23 @@ impl Reactor {
         self.border_manager.update_focus(
             focused_window,
             frame,
+            window_server_id,
             &self.config_manager.config.settings.ui.window_border,
             animation_duration,
             animate,
         );
+
+        if animate && let Some(link) = &self.display_link {
+            link.start();
+        }
     }
 
     fn tick_border_animation(&mut self) {
-        self.border_manager.tick_animation();
+        if !self.border_manager.tick_animation()
+            && let Some(link) = &self.display_link
+        {
+            link.stop();
+        }
     }
 
     fn workspace_command_space(&self) -> Option<SpaceId> {

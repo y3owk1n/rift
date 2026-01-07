@@ -31,7 +31,7 @@
 
 #### Feature
 
-- added border for focused window
+- added border for focused window (auto corner radii supported)
 
 #### UX
 

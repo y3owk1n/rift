@@ -374,4 +374,67 @@ unsafe extern "C" {
         y_offset: u32,
     ) -> CGError;
     pub fn SLSFlushWindowContentRegion(cid: cid_t, wid: u32, dirty: *mut c_void) -> CGError;
+
+    // SLSTransaction API for batched, atomic window operations
+    // These are critical for flicker-free window updates
+    pub fn SLSTransactionCreate(cid: cid_t) -> *mut CFType;
+    pub fn SLSTransactionCommit(transaction: *mut CFType, flags: c_int) -> CGError;
+    pub fn SLSTransactionMoveWindowWithGroup(
+        transaction: *mut CFType,
+        wid: u32,
+        point: CGPoint,
+    ) -> CGError;
+    pub fn SLSTransactionSetWindowLevel(
+        transaction: *mut CFType,
+        wid: u32,
+        level: c_int,
+    ) -> CGError;
+    pub fn SLSTransactionSetWindowSubLevel(
+        transaction: *mut CFType,
+        wid: u32,
+        sub_level: c_int,
+    ) -> CGError;
+    pub fn SLSTransactionOrderWindow(
+        transaction: *mut CFType,
+        wid: u32,
+        order: c_int,
+        relative_wid: u32,
+    ) -> CGError;
+    pub fn SLSTransactionSetWindowTransform(
+        transaction: *mut CFType,
+        wid: u32,
+        unknown1: c_int,
+        unknown2: c_int,
+        transform: CGAffineTransform,
+    ) -> CGError;
+    pub fn SLSTransactionSetWindowShape(
+        transaction: *mut CFType,
+        wid: u32,
+        x_offset: f32,
+        y_offset: f32,
+        shape: *mut CFType,
+    ) -> CGError;
+}
+
+/// CGAffineTransform for use with SLSTransactionSetWindowTransform
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CGAffineTransform {
+    pub a: f64,
+    pub b: f64,
+    pub c: f64,
+    pub d: f64,
+    pub tx: f64,
+    pub ty: f64,
+}
+
+impl CGAffineTransform {
+    pub const IDENTITY: Self = Self {
+        a: 1.0,
+        b: 0.0,
+        c: 0.0,
+        d: 1.0,
+        tx: 0.0,
+        ty: 0.0,
+    };
 }
