@@ -564,7 +564,11 @@ impl<'de> serde::Deserialize<'de> for BorderColor {
                 E: serde::de::Error,
             {
                 let hex = value.trim_start_matches('#');
-                let hex = if hex.len() == 6 { hex } else if hex.len() == 8 { &hex[..6] } else {
+                let hex = if hex.len() == 6 {
+                    hex
+                } else if hex.len() == 8 {
+                    &hex[..6]
+                } else {
                     return Err(E::invalid_value(serde::de::Unexpected::Str(value), &self));
                 };
 
@@ -590,7 +594,12 @@ impl<'de> serde::Deserialize<'de> for BorderColor {
                         "g" => g = Some(map.next_value()?),
                         "b" => b = Some(map.next_value()?),
                         "a" => a = Some(map.next_value()?),
-                        _ => return Err(serde::de::Error::unknown_field(key, &["r", "g", "b", "a"])),
+                        _ => {
+                            return Err(serde::de::Error::unknown_field(
+                                key,
+                                &["r", "g", "b", "a"],
+                            ));
+                        }
                     }
                 }
 

@@ -48,7 +48,6 @@ use crate::actor::{self, menu_bar, stack_line};
 use crate::common::collections::{BTreeMap, HashMap, HashSet};
 use crate::common::config::Config;
 use crate::common::log::MetricsCommand;
-use crate::ui::border::FocusBorderWindow;
 use crate::layout_engine::{self as layout, Direction, LayoutCommand, LayoutEngine, LayoutEvent};
 use crate::model::VirtualWorkspaceId;
 use crate::model::tx_store::WindowTxStore;
@@ -62,6 +61,7 @@ use crate::sys::window_server::{
     self, WindowServerId, WindowServerInfo, current_cursor_location, space_is_fullscreen,
     wait_for_native_fullscreen_transition, window_level,
 };
+use crate::ui::border::FocusBorderWindow;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub type Sender = actor::Sender<Event>;
@@ -599,10 +599,12 @@ impl Reactor {
             },
             border_manager: managers::BorderManager {
                 border_window: if config.settings.ui.window_border.enabled {
-                    Some(std::cell::RefCell::new(FocusBorderWindow::new().unwrap_or_else(|e| {
-                        tracing::warn!("Failed to create focus border window: {}", e);
-                        FocusBorderWindow::default()
-                    })))
+                    Some(std::cell::RefCell::new(FocusBorderWindow::new().unwrap_or_else(
+                        |e| {
+                            tracing::warn!("Failed to create focus border window: {}", e);
+                            FocusBorderWindow::default()
+                        },
+                    )))
                 } else {
                     None
                 },
@@ -2556,16 +2558,11 @@ impl Reactor {
 
     fn update_focus_border(&mut self) {
         let focused_window = self.main_window();
-        let frame = focused_window.and_then(|wid| {
-            self.window_manager
-                .windows
-                .get(&wid)
-                .map(|w| w.frame_monotonic)
-        });
+        let frame = focused_window
+            .and_then(|wid| self.window_manager.windows.get(&wid).map(|w| w.frame_monotonic));
 
-        let animation_duration = Duration::from_secs_f64(
-            self.config_manager.config.settings.animation_duration,
-        );
+        let animation_duration =
+            Duration::from_secs_f64(self.config_manager.config.settings.animation_duration);
         let animate = self.config_manager.config.settings.animate;
 
         self.border_manager.update_focus(

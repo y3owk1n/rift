@@ -207,7 +207,8 @@ impl CommandEventHandler {
         if border_enabled {
             if reactor.border_manager.border_window.is_none() {
                 if let Ok(border_window) = crate::ui::border::FocusBorderWindow::new() {
-                    reactor.border_manager.border_window = Some(std::cell::RefCell::new(border_window));
+                    reactor.border_manager.border_window =
+                        Some(std::cell::RefCell::new(border_window));
                 } else {
                     warn!("Failed to create focus border window");
                 }
@@ -217,7 +218,9 @@ impl CommandEventHandler {
             reactor.border_manager.border_window = None;
         }
 
-        reactor.border_manager.update_config(&reactor.config_manager.config.settings.ui.window_border);
+        reactor
+            .border_manager
+            .update_config(&reactor.config_manager.config.settings.ui.window_border);
 
         let _ = reactor.update_layout(false, true).unwrap_or_else(|e| {
             warn!("Layout update failed: {}", e);
