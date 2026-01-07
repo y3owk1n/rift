@@ -348,10 +348,13 @@ impl<
 pub enum LayoutSystemKind {
     Traditional(TraditionalLayoutSystem),
     Bsp(BspLayoutSystem),
+    Dwindle(DwindleLayoutSystem),
 }
 
 mod bsp;
+mod dwindle;
 mod traditional;
 
 pub use bsp::BspLayoutSystem;
+pub use dwindle::DwindleLayoutSystem;
 pub use traditional::TraditionalLayoutSystem;

@@ -32,6 +32,7 @@
 #### Feature
 
 - added border for focused window (auto corner radii supported)
+- dwindle layout (like hyprland)
 
 #### UX
 

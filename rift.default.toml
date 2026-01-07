@@ -76,9 +76,20 @@ hot_reload = true
 
 [settings.layout]
 # Layout system
-# - mode: "traditional" (i3/sway-like containers) or "bsp" (binary space partitioning)
+# - mode: "traditional" (i3/sway-like containers), "bsp" (binary space partitioning),
+#         or "dwindle" (Hyprland-style dynamic BSP)
 #   defaults to "traditional" if omitted
 mode = "traditional"
+
+# Dwindle-specific settings (only apply when mode = "dwindle")
+[settings.layout.dwindle]
+# If true, split orientations persist after creation
+preserve_split = false
+# Force split direction: 0 = dynamic (based on W/H ratio), 1 = always left/top, 2 = always right/bottom
+# Options: "dynamic", "left_top", "right_bottom"
+force_split = "dynamic"
+# Default split ratio when creating new splits (0.0-1.0)
+default_split_ratio = 0.5
 
 [settings.layout.stack]
 # How much of each stacked window sticks out (in pixels)

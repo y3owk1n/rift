@@ -685,6 +685,9 @@ pub struct LayoutSettings {
     /// Gap configuration for window spacing
     #[serde(default)]
     pub gaps: GapSettings,
+    /// Dwindle layout settings (only applies when mode = "dwindle")
+    #[serde(default)]
+    pub dwindle: DwindleSettings,
 }
 
 /// Layout mode enum
@@ -696,6 +699,50 @@ pub enum LayoutMode {
     Traditional,
     /// Binary space partitioning tiling
     Bsp,
+    /// Dwindle layout (dynamic BSP based on W/H ratio)
+    Dwindle,
+}
+
+/// Force split direction for dwindle layout
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum DwindleForceSplit {
+    /// Dynamic: split based on W/H ratio
+    #[default]
+    Dynamic,
+    /// Always split to the left or top
+    LeftTop,
+    /// Always split to the right or bottom
+    RightBottom,
+}
+
+/// Dwindle layout settings
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct DwindleSettings {
+    /// If true, split orientations persist after creation
+    #[serde(default)]
+    pub preserve_split: bool,
+    /// Force split direction
+    #[serde(default)]
+    pub force_split: DwindleForceSplit,
+    /// Default split ratio when creating new splits (0.0-1.0)
+    #[serde(default = "default_dwindle_split_ratio")]
+    pub default_split_ratio: f32,
+}
+
+impl Default for DwindleSettings {
+    fn default() -> Self {
+        Self {
+            preserve_split: false,
+            force_split: DwindleForceSplit::Dynamic,
+            default_split_ratio: default_dwindle_split_ratio(),
+        }
+    }
+}
+
+fn default_dwindle_split_ratio() -> f32 {
+    0.5
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]

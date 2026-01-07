@@ -133,6 +133,7 @@ impl LayoutEngine {
         match &self.tree {
             LayoutSystemKind::Traditional(_) => "traditional",
             LayoutSystemKind::Bsp(_) => "bsp",
+            LayoutSystemKind::Dwindle(_) => "dwindle",
         }
     }
 
@@ -593,6 +594,11 @@ impl LayoutEngine {
             ),
             crate::common::config::LayoutMode::Bsp => {
                 LayoutSystemKind::Bsp(crate::layout_engine::BspLayoutSystem::default())
+            }
+            crate::common::config::LayoutMode::Dwindle => {
+                LayoutSystemKind::Dwindle(crate::layout_engine::systems::DwindleLayoutSystem::new(
+                    layout_settings.dwindle.clone(),
+                ))
             }
         };
 
@@ -1160,6 +1166,10 @@ impl LayoutEngine {
                         }
                     }
                     LayoutSystemKind::Bsp(s) => {
+                        s.toggle_tile_orientation(layout);
+                        EventResponse::default()
+                    }
+                    LayoutSystemKind::Dwindle(s) => {
                         s.toggle_tile_orientation(layout);
                         EventResponse::default()
                     }
