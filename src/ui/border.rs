@@ -11,7 +11,7 @@ use tracing::warn;
 
 use crate::sys::cgs_window::{CgsWindow, CgsWindowError};
 use crate::sys::skylight::{
-    CFRelease, SLSFlushWindowContentRegion, SLWindowContextCreate, G_CONNECTION,
+    CFRelease, G_CONNECTION, SLSFlushWindowContentRegion, SLWindowContextCreate,
 };
 
 unsafe extern "C" {
@@ -165,6 +165,8 @@ impl FocusBorderWindow {
             CGPoint::new(0.0, 0.0),
             CGSize::new(rect.size.width, rect.size.height),
         ));
+
+        *self.frame.borrow_mut() = rect;
 
         if let Err(err) = self.cgs_window.set_level(NSPopUpMenuWindowLevel as i32) {
             warn!(error=?err, "failed to set border window level");
