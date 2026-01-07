@@ -409,6 +409,38 @@ impl DwindleLayoutSystem {
                     left.detach(&mut self.tree).push_back(sel);
                     right.detach(&mut self.tree).push_back(sel);
                     self.tree.data.selection.select(&self.tree.map, right);
+
+                    // Simulate cache update for new children so subsequent insertions (e.g. startup)
+                    // have valid geometry to work with. Ignoring gaps for simplicity as precise calculation
+                    // isn't needed for orientation decisions.
+                    let (r1, r2) = match orientation {
+                        Orientation::Horizontal => {
+                            let total = rect.size.width;
+                            let first_w = total * (self.settings.default_split_ratio as f64);
+                            let second_w = total - first_w;
+                            (
+                                CGRect::new(rect.origin, CGSize::new(first_w, rect.size.height)),
+                                CGRect::new(
+                                    CGPoint::new(rect.origin.x + first_w, rect.origin.y),
+                                    CGSize::new(second_w, rect.size.height),
+                                ),
+                            )
+                        }
+                        Orientation::Vertical => {
+                            let total = rect.size.height;
+                            let first_h = total * (self.settings.default_split_ratio as f64);
+                            let second_h = total - first_h;
+                            (
+                                CGRect::new(rect.origin, CGSize::new(rect.size.width, first_h)),
+                                CGRect::new(
+                                    CGPoint::new(rect.origin.x, rect.origin.y + first_h),
+                                    CGSize::new(rect.size.width, second_h),
+                                ),
+                            )
+                        }
+                    };
+                    self.rect_cache.borrow_mut().insert(left, r1);
+                    self.rect_cache.borrow_mut().insert(right, r2);
                 }
             }
             Some(NodeKind::Split { .. }) => {
@@ -1631,6 +1663,28 @@ mod tests {
                 "Window 3 should be wider than tall (Top-Right quadrant) but was {:?}",
                 frame_3
             );
+        }
+    }
+
+    mod startup_reorganization {
+        use super::*;
+
+        #[test]
+        fn bulk_window_insertion_spirals_correctly() {
+            let mut system = DwindleLayoutSystem::default();
+            let layout = system.create_layout();
+
+            // Simulate startup: Add 3 windows sequentially WITHOUT calculating layout in between.
+            system.add_window_after_selection(layout, w(1, 1));
+            // 2nd window - should split H (default).
+            system.add_window_after_selection(layout, w(1, 2)); 
+            // 3rd window - should split V (if smart). If dumb, splits H.
+            system.add_window_after_selection(layout, w(1, 3)); 
+
+            let tree = system.draw_tree(layout);
+            println!("Tree structure: {}", tree);
+
+            assert!(tree.contains("Vertical"), "Startup bulk insertion failed to spiral: {}", tree);
         }
     }
 }
