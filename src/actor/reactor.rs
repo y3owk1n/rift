@@ -2034,6 +2034,12 @@ impl Reactor {
         } = response;
         let original_focus = focus_window;
 
+        let focus_quiet = if workspace_switch_space.is_some() {
+            Quiet::Yes
+        } else {
+            Quiet::No
+        };
+
         let mut handled_without_raise = false;
 
         if raise_windows.is_empty() && focus_window.is_none() {
@@ -2210,6 +2216,7 @@ impl Reactor {
             raise_windows: windows_by_app_and_screen.into_values().collect(),
             focus_window: focus_window_with_warp,
             app_handles,
+            focus_quiet,
         });
 
         if let Err(e) = self.communication_manager.raise_manager_tx.try_send(msg) {
@@ -2485,6 +2492,7 @@ impl Reactor {
                 raise_windows: vec![vec![wid]],
                 focus_window: Some((wid, warp)),
                 app_handles,
+                focus_quiet: quiet,
             }));
     }
 
