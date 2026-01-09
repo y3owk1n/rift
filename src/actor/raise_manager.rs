@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use objc2_core_foundation::CGPoint;
@@ -228,16 +229,18 @@ impl RaiseManager {
                 warn!("App not found for pid {:?}", pid);
                 continue;
             };
+            let wids_arc = Arc::new(wids);
             if app_handle
                 .send(Request::Raise(
-                    wids.clone(),
+                    Arc::clone(&wids_arc),
                     raise_token.clone(),
                     sequence_id,
                     Quiet::Yes,
                 ))
                 .is_ok()
             {
-                pending_raises.extend(wids);
+                pending_raises
+                    .extend(Arc::try_unwrap(wids_arc).unwrap_or_else(|arc| (*arc).clone()));
             }
         }
         if let Some((wid, warp)) = focus_window
@@ -275,9 +278,10 @@ impl RaiseManager {
             debug!(focus_window = ?wids);
             let app_handle = sequence.app_handles.get(&pid);
             if let Some(handle) = app_handle {
+                let wids_arc = Arc::new(wids);
                 if handle
                     .send(Request::Raise(
-                        wids.clone(),
+                        Arc::clone(&wids_arc),
                         sequence.raise_token.clone(),
                         sequence.sequence_id, // Use proper sequence ID for tracking
                         quiet,
@@ -285,7 +289,9 @@ impl RaiseManager {
                     .is_ok()
                 {
                     // Add focus window to pending raises so we wait for completion.
-                    sequence.pending_raises.extend(wids);
+                    sequence
+                        .pending_raises
+                        .extend(Arc::try_unwrap(wids_arc).unwrap_or_else(|arc| (*arc).clone()));
                     trace!("Focus window request sent and added to pending raises");
                 } else {
                     warn!("Failed to send focus window request");
@@ -361,7 +367,7 @@ mod tests {
         expected_quiet: Quiet,
     ) {
         if let Request::Raise(wid, _, seq_id, quiet) = request {
-            assert_eq!(*wid, vec![expected_wid]);
+            assert_eq!(*wid, Arc::new(vec![expected_wid]));
             assert_eq!(*seq_id, expected_seq_id);
             assert_eq!(*quiet, expected_quiet);
         } else {
@@ -372,7 +378,7 @@ mod tests {
     fn find_raise_request(requests: &[Request], expected_wid: WindowId) -> bool {
         requests.iter().any(|r| {
             if let Request::Raise(wid, _, _, quiet) = r {
-                *wid == vec![expected_wid] && *quiet == Quiet::No
+                *wid == Arc::new(vec![expected_wid]) && *quiet == Quiet::No
             } else {
                 false
             }
@@ -748,7 +754,9 @@ mod tests {
             let requests = collect_requests(&mut app_rx);
             let second_focus_sent = requests.iter().any(|r| {
                 if let Request::Raise(wid, _, seq_id, quiet) = r {
-                    *wid == vec![WindowId::new(1, 3)] && *seq_id == 2 && *quiet == Quiet::No
+                    *wid == Arc::new(vec![WindowId::new(1, 3)])
+                        && *seq_id == 2
+                        && *quiet == Quiet::No
                 } else {
                     false
                 }
@@ -797,14 +805,14 @@ mod tests {
 
             // Verify second and third batches are processed first.
             if let Request::Raise(wids, _, seq_id, quiet) = &requests[0] {
-                assert_eq!(*wids, vec![WindowId::new(1, 3), WindowId::new(1, 4)]);
+                assert_eq!(*wids, Arc::new(vec![WindowId::new(1, 3), WindowId::new(1, 4)]));
                 assert_eq!(*seq_id, 1);
                 assert_eq!(*quiet, Quiet::Yes);
             } else {
                 panic!("Expected Raise request for second batch");
             }
             if let Request::Raise(wids, _, seq_id, quiet) = &requests[1] {
-                assert_eq!(*wids, vec![WindowId::new(1, 5), WindowId::new(1, 6)]);
+                assert_eq!(*wids, Arc::new(vec![WindowId::new(1, 5), WindowId::new(1, 6)]));
                 assert_eq!(*seq_id, 1);
                 assert_eq!(*quiet, Quiet::Yes);
             } else {
@@ -832,11 +840,11 @@ mod tests {
             if let Request::Raise(wids, _, seq_id, quiet) = &requests[0] {
                 assert_eq!(
                     *wids,
-                    vec![
+                    Arc::new(vec![
                         WindowId::new(1, 1),
                         WindowId::new(1, 2),
                         WindowId::new(1, 7),
-                    ]
+                    ])
                 );
                 assert_eq!(*seq_id, 1);
                 assert_eq!(*quiet, Quiet::No);

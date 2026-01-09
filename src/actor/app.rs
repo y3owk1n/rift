@@ -6,6 +6,7 @@
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::num::NonZeroU32;
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -228,10 +229,10 @@ pub enum Request {
     /// Events attributed to this request will use the provided [`Quiet`]
     /// parameter for the last window only. Events for other windows will be
     /// marked `Quiet::Yes` automatically.
-    Raise(Vec<WindowId>, CancellationToken, u64, Quiet),
+    Raise(Arc<Vec<WindowId>>, CancellationToken, u64, Quiet),
 }
 
-struct RaiseRequest(Vec<WindowId>, CancellationToken, u64, Quiet);
+struct RaiseRequest(Arc<Vec<WindowId>>, CancellationToken, u64, Quiet);
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub enum Quiet {
@@ -395,7 +396,7 @@ impl State {
     async fn handle_raises(this: &RefCell<Self>, mut rx: actor::Receiver<RaiseRequest>) {
         while let Some((span, raise)) = rx.recv().await {
             let RaiseRequest(wids, token, sequence_id, quiet) = raise;
-            if let Err(e) = Self::handle_raise_request(this, wids, &token, sequence_id, quiet)
+            if let Err(e) = Self::handle_raise_request(this, &wids, &token, sequence_id, quiet)
                 .instrument(span)
                 .await
             {
@@ -699,8 +700,12 @@ impl State {
                 ));
             }
             &mut Request::Raise(ref wids, ref token, sequence_id, quiet) => {
-                self.raises_tx
-                    .send(RaiseRequest(wids.clone(), token.clone(), sequence_id, quiet));
+                self.raises_tx.send(RaiseRequest(
+                    Arc::clone(wids),
+                    token.clone(),
+                    sequence_id,
+                    quiet,
+                ));
             }
         }
         Ok(false)
@@ -854,7 +859,7 @@ impl From<AxError> for RaiseError {
 impl State {
     async fn handle_raise_request(
         this_ref: &RefCell<Self>,
-        wids: Vec<WindowId>,
+        wids: &[WindowId],
         token: &CancellationToken,
         sequence_id: u64,
         quiet: Quiet,
