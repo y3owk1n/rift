@@ -4,7 +4,4 @@ rift.toml
 src/bin/dev.rs
 
 .devbox
-devbox.json
-devbox.lock
-.envrc
 test-config.toml

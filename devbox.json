@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": [
+    "rustup@1.28.2",
+    "just@1.45.0",
+    "just-lsp@0.3.0",
+    "libiconv@2.40"
+  ]
+}
