@@ -541,21 +541,9 @@ impl Reactor {
             config_manager: managers::ConfigManager { config: config.clone() },
             app_manager: managers::AppManager::new(),
             layout_manager: managers::LayoutManager { layout_engine },
-            window_manager: managers::WindowManager {
-                windows: HashMap::default(),
-                window_ids: HashMap::default(),
-                visible_windows: HashSet::default(),
-                observed_window_server_ids: HashSet::default(),
-            },
-            window_server_info_manager: managers::WindowServerInfoManager {
-                window_server_info: HashMap::default(),
-            },
-            space_manager: managers::SpaceManager {
-                screens: vec![],
-                fullscreen_by_space: HashMap::default(),
-                changing_screens: HashSet::default(),
-                screen_space_by_id: HashMap::default(),
-            },
+            window_manager: managers::WindowManager::new(),
+            window_server_info_manager: managers::WindowServerInfoManager::new(),
+            space_manager: managers::SpaceManager::new(),
             main_window_tracker_manager: managers::MainWindowTrackerManager {
                 main_window_tracker: MainWindowTracker::default(),
             },

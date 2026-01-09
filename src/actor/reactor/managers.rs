@@ -30,6 +30,17 @@ pub struct WindowManager {
     pub observed_window_server_ids: HashSet<WindowServerId>,
 }
 
+impl WindowManager {
+    pub fn new() -> Self {
+        WindowManager {
+            windows: HashMap::with_capacity_and_hasher(64, Default::default()),
+            window_ids: HashMap::with_capacity_and_hasher(64, Default::default()),
+            visible_windows: HashSet::with_capacity_and_hasher(64, Default::default()),
+            observed_window_server_ids: HashSet::with_capacity_and_hasher(64, Default::default()),
+        }
+    }
+}
+
 /// Manages application state and rules
 pub struct AppManager {
     pub apps: HashMap<pid_t, AppState>,
@@ -39,8 +50,8 @@ pub struct AppManager {
 impl AppManager {
     pub fn new() -> Self {
         AppManager {
-            apps: HashMap::default(),
-            app_rules_recent_targets: HashMap::default(),
+            apps: HashMap::with_capacity_and_hasher(32, Default::default()),
+            app_rules_recent_targets: HashMap::with_capacity_and_hasher(32, Default::default()),
         }
     }
 
@@ -88,6 +99,15 @@ pub struct SpaceManager {
 }
 
 impl SpaceManager {
+    pub fn new() -> Self {
+        SpaceManager {
+            screens: Vec::with_capacity(8),
+            fullscreen_by_space: HashMap::with_capacity_and_hasher(16, Default::default()),
+            changing_screens: HashSet::with_capacity_and_hasher(8, Default::default()),
+            screen_space_by_id: HashMap::with_capacity_and_hasher(8, Default::default()),
+        }
+    }
+
     pub fn space_for_screen(&self, screen: &Screen) -> Option<SpaceId> {
         screen.space.or_else(|| self.screen_space_by_id.get(&screen.screen_id).copied())
     }
@@ -376,6 +396,14 @@ impl LayoutManager {
 /// Manages window server information
 pub struct WindowServerInfoManager {
     pub window_server_info: HashMap<WindowServerId, WindowServerInfo>,
+}
+
+impl WindowServerInfoManager {
+    pub fn new() -> Self {
+        WindowServerInfoManager {
+            window_server_info: HashMap::with_capacity_and_hasher(64, Default::default()),
+        }
+    }
 }
 
 /// Manages main window tracking
