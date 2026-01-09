@@ -1,12 +1,8 @@
 # AGENTS.md
 
-This document provides guidelines and instructions for AI agents working on the rift window manager codebase (Rust/macOS).
+This document provides guidelines for AI agents working on the **Rift** window manager (Rust/macOS).
 
-## Project Overview
-
-**Rift** is a window manager for macOS written in Rust. It uses macOS APIs (SkyLight, Core Graphics, Accessibility) and implements an actor-based concurrency model with tokio.
-
-**Binary**: `rift` (main daemon with CLI via clap)
+**Binary**: `rift` (main daemon with CLI via clap) | **Edition**: Rust 2024
 
 ## Build Commands
 
@@ -14,10 +10,6 @@ This document provides guidelines and instructions for AI agents working on the 
 cargo build                      # Debug build
 cargo build --release            # Release build with optimizations
 cargo check --locked             # Check compilation without building
-
-# Universal binary build
-cargo build --release --bins --target aarch64-apple-darwin
-cargo build --release --bins --target x86_64-apple-darwin
 ```
 
 ## Testing
@@ -25,30 +17,26 @@ cargo build --release --bins --target x86_64-apple-darwin
 ```bash
 cargo test --lib -- --test-threads=1  # Run lib tests serially (required on macOS)
 cargo test --lib -- --test-threads=1 test_name  # Run single test by name
-cargo bench                      # Run benchmarks
-cargo test --doc                 # Doc tests
+cargo bench                          # Run benchmarks
+cargo test --doc                     # Doc tests
 ```
 
-**Note:** Tests must run with `--test-threads=1` to avoid macOS ObjC runtime race conditions
-when accessing window server APIs in parallel (SLSWindowManagementFallbackBridge crashes).
+**Note:** Tests must run with `--test-threads=1` to avoid macOS ObjC runtime race conditions when accessing window server APIs.
 
 ## Linting and Formatting
 
 ```bash
-cargo fmt --all                  # Format code
-cargo fmt --all --check          # Check formatting
-cargo clippy --all-targets --all-features -- -D warnings  # Lint
-cargo clippy --fix --allow-dirty # Auto-fix some lints
+cargo fmt --all                      # Format code
+cargo fmt --all --check              # Check formatting
+cargo clippy --all-targets --all-features  # Lint
+cargo clippy --fix --allow-dirty     # Auto-fix some lints
 ```
 
 ## Code Style
 
 ### Import Grouping
 
-Group imports in this order:
-1. Standard library
-2. External crates (alphabetical)
-3. Local modules
+Group imports in this order: std → external crates (alphabetical) → local modules.
 
 ```rust
 use std::path::{Path, PathBuf};
@@ -64,21 +52,19 @@ use crate::sys::hotkey::{Hotkey, HotkeySpec};
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Structs/Enums/Traits | PascalCase | `ConfigActor`, `LayoutMode` |
-| Functions/methods | snake_case | `ensure_accessibility_permission()` |
-| Variables | snake_case | `window_tx`, `config_path` |
-| Constants | SCREAMING_SNAKE_CASE | `MAX_WORKSPACES` |
-| Modules | snake_case | `actor`, `layout_engine` |
-| Acronyms | Mixed case | `CGSEventType`, `WmCommand` |
+| Type                 | Convention           | Example                             |
+| -------------------- | -------------------- | ----------------------------------- |
+| Structs/Enums/Traits | PascalCase           | `ConfigActor`, `LayoutMode`         |
+| Functions/methods    | snake_case           | `ensure_accessibility_permission()` |
+| Variables            | snake_case           | `window_tx`, `config_path`          |
+| Constants            | SCREAMING_SNAKE_CASE | `MAX_WORKSPACES`                    |
+| Modules              | snake_case           | `actor`, `layout_engine`            |
+| Acronyms             | Mixed case           | `CGSEventType`, `WmCommand`         |
 
 ### Error Handling
 
-- Use `anyhow::Result<T>` for fallible functions
-- Use `thiserror` for library-style errors
-- Use `bail!("message")` for early returns
-- Use `context()` for error context
+- Use `anyhow::Result<T>` for fallible functions, `thiserror` for library errors
+- Use `bail!("message")` for early returns, `context()` for error context
 
 ```rust
 pub fn read(path: &Path) -> anyhow::Result<Config> {
@@ -91,8 +77,7 @@ pub fn read(path: &Path) -> anyhow::Result<Config> {
 
 - Use `tokio::sync::mpsc` for actor message passing
 - Use `Sender<T>` wrapper types (see `actor.rs`)
-- Use `DashMap` for concurrent hash maps
-- Use `Arc<AtomicBool>` for shutdown signals
+- Use `DashMap` for concurrent hash maps, `Arc<AtomicBool>` for shutdown signals
 
 ```rust
 pub struct Sender<Event>(UnboundedSender<(Span, Event)>);
@@ -136,18 +121,17 @@ let _ = events_tx.send(reactor::Event::Command(reactor::Command::SaveAndExit));
 
 Each actor runs an async loop processing messages from its receiver.
 
-## Configuration
+## Configuration & State
 
-- **Format**: TOML
-- **Location**: `~/.config/rift/config.toml`
+- **Config**: `~/.config/rift/config.toml` (TOML format)
+- **State**: `~/.rift/layout.ron` (RON serialization)
 - **Validation**: `Config::validate()` returns `Vec<String>` of issues
-- **State**: `~/.rift/layout.ron`
 
 ## Key Dependencies
 
 - `tokio` - Async runtime
 - `anyhow` / `thiserror` - Error handling
-- `serde` - Serialization
+- `serde` / `ron` - Serialization
 - `objc2-*` - Objective-C interop
 - `dashmap` - Concurrent hash map
 - `tracing` - Structured logging
