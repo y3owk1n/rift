@@ -1677,14 +1677,18 @@ mod tests {
             // Simulate startup: Add 3 windows sequentially WITHOUT calculating layout in between.
             system.add_window_after_selection(layout, w(1, 1));
             // 2nd window - should split H (default).
-            system.add_window_after_selection(layout, w(1, 2)); 
+            system.add_window_after_selection(layout, w(1, 2));
             // 3rd window - should split V (if smart). If dumb, splits H.
-            system.add_window_after_selection(layout, w(1, 3)); 
+            system.add_window_after_selection(layout, w(1, 3));
 
             let tree = system.draw_tree(layout);
             println!("Tree structure: {}", tree);
 
-            assert!(tree.contains("Vertical"), "Startup bulk insertion failed to spiral: {}", tree);
+            assert!(
+                tree.contains("Vertical"),
+                "Startup bulk insertion failed to spiral: {}",
+                tree
+            );
         }
     }
 }
