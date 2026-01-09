@@ -1647,9 +1647,8 @@ impl Reactor {
     }
 
     fn send_layout_event(&mut self, event: LayoutEvent) {
-        let event_clone = event.clone();
+        self.prepare_refocus_after_layout_event(&event);
         let response = self.layout_manager.layout_engine.handle_event(event);
-        self.prepare_refocus_after_layout_event(&event_clone);
         self.handle_layout_response(response, None);
         for space in self.space_manager.iter_known_spaces() {
             self.layout_manager.layout_engine.debug_tree_desc(space, "after event", false);
