@@ -20,6 +20,7 @@ mod tests;
 pub mod transaction_manager;
 mod utils;
 
+use std::cell::RefCell;
 use std::thread;
 use std::time::Duration;
 
@@ -390,6 +391,7 @@ pub struct Reactor {
     active_spaces: HashSet<SpaceId>,
     mc_active: std::sync::Arc<AtomicBool>,
     display_link: Option<DisplayLink>,
+    cached_main_window_space: RefCell<Option<(WindowId, SpaceId)>>,
 }
 
 #[derive(Debug)]
@@ -611,6 +613,7 @@ impl Reactor {
             active_spaces: HashSet::default(),
             mc_active,
             display_link: None,
+            cached_main_window_space: RefCell::new(None),
         }
     }
 
@@ -2586,9 +2589,26 @@ impl Reactor {
 
     #[inline]
     fn main_window_space(&self) -> Option<SpaceId> {
-        // TODO: Optimize this with a cache or something.
         let wid = self.main_window()?;
-        self.best_space_for_window_id(wid)
+        let cache = self.cached_main_window_space.borrow_mut();
+        if let Some((cached_wid, cached_space)) = &*cache
+            && *cached_wid == wid
+            && self.window_manager.windows.contains_key(&wid)
+        {
+            let current_space = self.best_space_for_window_id(wid);
+            if current_space == Some(*cached_space) {
+                return Some(*cached_space);
+            }
+        }
+        drop(cache);
+        let space = self.best_space_for_window_id(wid);
+        let mut cache = self.cached_main_window_space.borrow_mut();
+        if let Some(s) = space {
+            *cache = Some((wid, s));
+        } else {
+            cache.take();
+        }
+        space
     }
 
     fn update_focus_border(&mut self) {
